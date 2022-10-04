@@ -33,3 +33,19 @@ Homepage = "https://github.com/ConX/drpt"
 
 [project.scripts]
 drpt = "drpt.__main__:main"
+
+[tool.bumpver]
+current_version = "0.1.0"
+version_pattern = "MAJOR.MINOR.PATCH[PYTAGNUM]"
+commit_message = "Bump version {old_version} -> {new_version}"
+commit = true
+tag = true
+push = true
+
+[tool.bumpver.file_patterns]
+"pyproject.toml" = [
+    'current_version = "{version}"',
+]
+"src/drpt/__init__.py" = [
+    '__version__ = "{version}"',
+]
