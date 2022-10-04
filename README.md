@@ -36,9 +36,9 @@ All column definitions above support regular expressions.
 Usage: drpt [OPTIONS] RECIPE_FILE INPUT_FILE
 
 Options:
-  -d, --dry-run           Dry run
-  -v, --verbose           Verbose
-  -n, --nrows TEXT        Number of rows to read
+  -d, --dry-run           Generate only the report without the release dataset
+  -v, --verbose           Verbose [Not implemented]
+  -n, --nrows TEXT        Number of rows to read from a CSV file. Doesn't work with parquet files.
   -ns, --no-scaling       Disable default Min/Max scaling
   -l, --limits-file PATH  Limits file
   -o, --output-file PATH  Output file

@@ -5,9 +5,19 @@ from drpt.drpt import DataReleasePrep
 
 
 @click.command(no_args_is_help=True)
-@click.option("--dry-run", "-d", is_flag=True, help="Dry run")
-@click.option("--verbose", "-v", is_flag=True, help="Verbose")
-@click.option("--nrows", "-n", default=None, help="Number of rows to read")
+@click.option(
+    "--dry-run",
+    "-d",
+    is_flag=True,
+    help="Generate only the report without the release dataset",
+)
+@click.option("--verbose", "-v", is_flag=True, help="Verbose [Not implemented]")
+@click.option(
+    "--nrows",
+    "-n",
+    default=None,
+    help="Number of rows to read from a CSV file. Doesn't work with parquet files.",
+)
 @click.option(
     "--no-scaling", "-ns", is_flag=True, help="Disable default Min/Max scaling"
 )

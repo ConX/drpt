@@ -93,37 +93,41 @@ class DataReleasePrep:
         if self.input_file.endswith(".csv"):
             data = pd.read_csv(self.input_file, nrows=self.nrows)
         elif self.input_file.endswith(".parquet"):
-            data = pd.read_parquet(self.input_file, engine="pyarrow", nrows=self.nrows)
+            # FIXME: Add message to say that nrows is not supported for parquet
+            data = pd.read_parquet(self.input_file, engine="pyarrow")
         return data
 
     def _drop_columns(self):
         for pat in self.recipe["actions"]["drop"]:
             for col in self.data.columns:
-                if re.match(pat, col):
+                if re.fullmatch(pat, col):
                     self.report.append((col, "dropped", ""))
-                    self.data.drop(col, axis=1, inplace=True)
+                    if not self.dry_run:
+                        self.data.drop(col, axis=1, inplace=True)
 
     def _rename_columns(self):
         for renaming in self.recipe["actions"]["rename"]:
             pat, repl = renaming.popitem()
             for col in self.data.columns:
-                if re.match(pat, col):
+                if re.fullmatch(pat, col):
                     sub = re.sub(pat, repl, col)
                     self.report.append((col, "renamed", sub))
-                    self.data.rename(columns={col: sub}, inplace=True)
+                    if not self.dry_run:
+                        self.data.rename(columns={col: sub}, inplace=True)
 
     def _obfuscate_columns(self):
         for pat in self.recipe["actions"]["obfuscate"]:
             for col in self.data.columns:
-                if re.match(pat, col):
+                if re.fullmatch(pat, col):
                     self.report.append((col, "obfuscated", ""))
-                    self.data[col] = self.data[col].astype("category").cat.codes
+                    if not self.dry_run:
+                        self.data[col] = self.data[col].astype("category").cat.codes
 
     def _scale_columns(self):
         for col in self.data.columns:
             for pat in self.recipe["actions"]["no-scaling"]:
                 if (
-                    not re.match(pat, col)
+                    not re.fullmatch(pat, col)
                     and col not in self.recipe["actions"]["obfuscate"]
                 ):
                     if self.limits is not None and col in self.limits:
@@ -132,12 +136,10 @@ class DataReleasePrep:
                             min = self.data[col].min()
                         if pd.isna(max):
                             max = self.data[col].max()
-                        self.data[col] = (self.data[col] - min) / (max - min)
                         self.report.append((col, "scaled", f"{min} - {max}"))
+                        if not self.dry_run:
+                            self.data[col] = (self.data[col] - min) / (max - min)
                     else:
-                        self.data[col] = (self.data[col] - self.data[col].min()) / (
-                            self.data[col].max() - self.data[col].min()
-                        )
                         self.report.append(
                             (
                                 col,
@@ -145,6 +147,10 @@ class DataReleasePrep:
                                 f"{self.data[col].min()} - {self.data[col].max()}",
                             )
                         )
+                        if not self.dry_run:
+                            self.data[col] = (self.data[col] - self.data[col].min()) / (
+                                self.data[col].max() - self.data[col].min()
+                            )
 
     def _read_limits(self):
         if Path(self.limits_file).suffix == ".csv":
