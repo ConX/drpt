@@ -88,6 +88,7 @@ class DataReleasePrep:
                 + self.recipe["version"]
                 + self.input_file_suffix
             )
+        self.report.append(("", "version", self.recipe["version"]))
 
     def _read_data(self):
         if self.input_file.endswith(".csv"):
