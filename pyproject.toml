@@ -1,0 +1,35 @@
+[build-system]
+requires = ["setuptools>=61.0.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "drpt"
+version = "0.1.0"
+description = "Tool for preparing a dataset for publishing by dropping, renaming, scaling, and obfuscating columns defined in a recipe."
+readme = "README.md"
+authors = [{ name = "Constantinos Xanthopoulos", email = "conx@xanthopoulos.info" }]
+license = { file = "LICENSE" }
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "Topic :: Scientific/Engineering",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Operating System :: OS Independent",
+]
+keywords = ["data", "data science", "preprocessing", "scaling", "obfuscation", "data release", "data publishing"]
+
+requires-python = ">=3.9"
+
+dependencies = [
+    "click >= 8.1.3",
+    "jsonschema >=4.16.0",
+    "pandas >=1.5.0",
+    "pyarrow >=9.0.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/ConX/drpt"
+
+[project.scripts]
+drpt = "drpt.__main__:main"
