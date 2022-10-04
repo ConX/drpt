@@ -1,5 +1,7 @@
 # Data Release Preparation Tool
 
+> :warning: This is currently at beta development stage and likely has a lot of bugs. Use the [issue tracker](https://github.com/ConX/drpt/issues) to report an bugs or feature requests.
+
 ## Description
 
 Command-line tool for preparing a dataset for publishing by dropping, renaming, scaling, and obfuscating columns defined in a recipe.
