@@ -99,59 +99,68 @@ class DataReleasePrep:
         return data
 
     def _drop_columns(self):
-        for pat in self.recipe["actions"]["drop"]:
-            for col in self.data.columns:
-                if re.fullmatch(pat, col):
-                    self.report.append((col, "dropped", ""))
-                    if not self.dry_run:
-                        self.data.drop(col, axis=1, inplace=True)
+        if "drop" in self.recipe["actions"]:
+            for pat in self.recipe["actions"]["drop"]:
+                for col in self.data.columns:
+                    if re.fullmatch(pat, col):
+                        self.report.append((col, "dropped", ""))
+                        if not self.dry_run:
+                            self.data.drop(col, axis=1, inplace=True)
 
     def _rename_columns(self):
-        for renaming in self.recipe["actions"]["rename"]:
-            pat, repl = renaming.popitem()
-            for col in self.data.columns:
-                if re.fullmatch(pat, col):
-                    sub = re.sub(pat, repl, col)
-                    self.report.append((col, "renamed", sub))
-                    if not self.dry_run:
-                        self.data.rename(columns={col: sub}, inplace=True)
+        if "rename" in self.recipe["actions"]:
+            for renaming in self.recipe["actions"]["rename"]:
+                pat, repl = renaming.popitem()
+                for col in self.data.columns:
+                    if re.fullmatch(pat, col):
+                        sub = re.sub(pat, repl, col)
+                        self.report.append((col, "renamed", sub))
+                        if not self.dry_run:
+                            self.data.rename(columns={col: sub}, inplace=True)
 
     def _obfuscate_columns(self):
-        for pat in self.recipe["actions"]["obfuscate"]:
-            for col in self.data.columns:
-                if re.fullmatch(pat, col):
-                    self.report.append((col, "obfuscated", ""))
-                    if not self.dry_run:
-                        self.data[col] = self.data[col].astype("category").cat.codes
+        if "obfuscate" in self.recipe["actions"]:
+            for pat in self.recipe["actions"]["obfuscate"]:
+                for col in self.data.columns:
+                    if re.fullmatch(pat, col):
+                        self.report.append((col, "obfuscated", ""))
+                        if not self.dry_run:
+                            self.data[col] = self.data[col].astype("category").cat.codes
 
     def _scale_columns(self):
         for col in self.data.columns:
-            for pat in self.recipe["actions"]["no-scaling"]:
-                if (
-                    not re.fullmatch(pat, col)
-                    and col not in self.recipe["actions"]["obfuscate"]
-                ):
-                    if self.limits is not None and col in self.limits:
-                        min, max = self.limits[col]["min"], self.limits[col]["max"]
-                        if pd.isna(min):
-                            min = self.data[col].min()
-                        if pd.isna(max):
-                            max = self.data[col].max()
-                        self.report.append((col, "scaled", f"{min} - {max}"))
-                        if not self.dry_run:
-                            self.data[col] = (self.data[col] - min) / (max - min)
-                    else:
-                        self.report.append(
-                            (
-                                col,
-                                "scaled",
-                                f"{self.data[col].min()} - {self.data[col].max()}",
-                            )
+            if col in self.recipe["actions"]["obfuscate"]:
+                continue
+
+            skip_scaling = False
+            no_scaling = self.recipe["actions"].get("no-scaling", [])
+            for pat in no_scaling:
+                if re.fullmatch(pat, col):
+                    skip_scaling = True
+                    break
+
+            if not skip_scaling:
+                if self.limits is not None and col in self.limits:
+                    min, max = self.limits[col]["min"], self.limits[col]["max"]
+                    if pd.isna(min):
+                        min = self.data[col].min()
+                    if pd.isna(max):
+                        max = self.data[col].max()
+                    self.report.append((col, "scaled", f"{min} - {max}"))
+                    if not self.dry_run:
+                        self.data[col] = (self.data[col] - min) / (max - min)
+                else:
+                    self.report.append(
+                        (
+                            col,
+                            "scaled",
+                            f"{self.data[col].min()} - {self.data[col].max()}",
                         )
-                        if not self.dry_run:
-                            self.data[col] = (self.data[col] - self.data[col].min()) / (
-                                self.data[col].max() - self.data[col].min()
-                            )
+                    )
+                    if not self.dry_run:
+                        self.data[col] = (self.data[col] - self.data[col].min()) / (
+                            self.data[col].max() - self.data[col].min()
+                        )
 
     def _read_limits(self):
         if Path(self.limits_file).suffix == ".csv":
