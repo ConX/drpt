@@ -2,6 +2,7 @@
 
 - [Data Release Preparation Tool](#data-release-preparation-tool)
   - [Description](#description)
+  - [Installation](#installation)
   - [Usage](#usage)
     - [CLI](#cli)
     - [Recipe Definition](#recipe-definition)
@@ -15,6 +16,14 @@
 Command-line tool for preparing a dataset for publishing by dropping, renaming, scaling, and obfuscating columns defined in a recipe.
 
 After performing the operations defined in the recipe the tool generates the transformed dataset version and a CSV report listing the performed actions.
+
+## Installation
+
+The tool can be installed using pip:
+
+```shell
+pip install drpt
+```
 
 ## Usage
 
