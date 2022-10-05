@@ -1,6 +1,5 @@
 #!/usr/bin/env python3.9
 import json
-import logging
 import re
 from pathlib import Path
 
@@ -42,6 +41,17 @@ RECIPE_SCHEMA = {
 }
 
 
+class ProgressMessage:
+    def __init__(self, message):
+        self.message = message
+
+    def __enter__(self):
+        print(f"⬜ {self.message}", end="\r")
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        print(f"✅ {self.message}", end="\r\n")
+
+
 class DataReleasePrep:
     def __init__(
         self,
@@ -63,12 +73,10 @@ class DataReleasePrep:
         self.nrows = nrows
         self.limits = None
         self.report = []
-        self.logger = None
 
         self.input_file_stem = Path(self.input_file).stem
         self.input_file_suffix = Path(self.input_file).suffix
 
-        self._init_logger()
         self._check_cmd_args()
         self._read_check_recipe()
         self.data = self._read_data()
@@ -77,14 +85,6 @@ class DataReleasePrep:
             self._read_limits()
 
         self._report_log("drpt_version", "", tool_version)
-
-    def _init_logger(self):
-        self.logger = logging.getLogger("drpt")
-        self.logger.setLevel(logging.INFO)
-        ch = logging.StreamHandler()
-        cf = logging.Formatter("%(message)s")
-        ch.setFormatter(cf)
-        self.logger.addHandler(ch)
 
     def _report_log(self, action, column, details):
         self.report.append((action, column, details))
@@ -108,18 +108,18 @@ class DataReleasePrep:
         self._report_log("recipe_version", "", self.recipe["version"])
 
     def _read_limits(self):
-        self.logger.info("Reading limits...")
-        if Path(self.limits_file).suffix == ".csv":
-            limits_df = pd.read_csv(
-                self.limits_file, header=None, skip_blank_lines=True
-            )
-            # Remove header row if present
-            if limits_df.iloc[0, :].tolist() == ["column", "min", "max"]:
-                limits_df.drop(0, inplace=True)
+        with ProgressMessage("Reading limits..."):
+            if Path(self.limits_file).suffix == ".csv":
+                limits_df = pd.read_csv(
+                    self.limits_file, header=None, skip_blank_lines=True
+                )
+                # Remove header row if present
+                if limits_df.iloc[0, :].tolist() == ["column", "min", "max"]:
+                    limits_df.drop(0, inplace=True)
 
-            limits_df.columns = ["column", "min", "max"]
-            limits_df.set_index("column", inplace=True)
-            self.limits = limits_df.to_dict(orient="index")
+                limits_df.columns = ["column", "min", "max"]
+                limits_df.set_index("column", inplace=True)
+                self.limits = limits_df.to_dict(orient="index")
 
         # TODO: Implement JSON input
         # if Path(self.limits_file).suffix == ".json":
@@ -127,112 +127,114 @@ class DataReleasePrep:
 
     def _read_data(self):
         if self.input_file.endswith(".csv"):
-            self.logger.info("Reading CSV data...")
-            data = pd.read_csv(self.input_file, nrows=self.nrows)
+            with ProgressMessage("Reading CSV data..."):
+                data = pd.read_csv(self.input_file, nrows=self.nrows)
         elif self.input_file.endswith(".parquet"):
-            self.logger.info("Reading Parquet data...")
             # FIXME: Add message to say that nrows is not supported for parquet
-            data = pd.read_parquet(self.input_file, engine="pyarrow")
+            with ProgressMessage("Reading Parquet data..."):
+                data = pd.read_parquet(self.input_file, engine="pyarrow")
         return data
 
     def _drop_columns(self):
         if "drop" in self.recipe["actions"]:
-            self.logger.info("Dropping columns...")
-            cols_to_drop = []
-            for pat in self.recipe["actions"]["drop"]:
-                for col in self.data.columns:
-                    if re.fullmatch(pat, col):
-                        self._report_log("DROP", col, "")
-                        cols_to_drop.append(col)
-            self.data.drop(cols_to_drop, axis=1, inplace=True)
+            with ProgressMessage("Dropping columns..."):
+                cols_to_drop = []
+                for pat in self.recipe["actions"]["drop"]:
+                    for col in self.data.columns:
+                        if re.fullmatch(pat, col):
+                            self._report_log("DROP", col, "")
+                            cols_to_drop.append(col)
+                self.data.drop(cols_to_drop, axis=1, inplace=True)
 
     def _drop_constant_columns(self):
         if self.recipe["actions"].get("drop-constant-columns", False):
-            self.logger.info("Dropping constant columns...")
-            cols_to_drop = []
-            for col in self.data.columns:
-                if self.data[col].nunique() == 1:
-                    self._report_log("DROP_CONSTANT", col, "")
-                    cols_to_drop.append(col)
-            self.data.drop(cols_to_drop, axis=1, inplace=True)
+            with ProgressMessage("Dropping constant columns..."):
+                cols_to_drop = []
+                for col in self.data.columns:
+                    if self.data[col].nunique() == 1:
+                        self._report_log("DROP_CONSTANT", col, "")
+                        cols_to_drop.append(col)
+                self.data.drop(cols_to_drop, axis=1, inplace=True)
 
     def _obfuscate_columns(self):
         if "obfuscate" in self.recipe["actions"]:
-            self.logger.info("Obfuscating columns...")
-            for pat in self.recipe["actions"]["obfuscate"]:
-                for col in self.data.columns:
-                    if re.fullmatch(pat, col):
-                        self._report_log("OBFUSCATE", col, "")
-                        if not self.dry_run:
-                            self.data[col] = self.data[col].astype("category").cat.codes
+            with ProgressMessage("Obfuscating columns..."):
+                for pat in self.recipe["actions"]["obfuscate"]:
+                    for col in self.data.columns:
+                        if re.fullmatch(pat, col):
+                            self._report_log("OBFUSCATE", col, "")
+                            if not self.dry_run:
+                                self.data[col] = (
+                                    self.data[col].astype("category").cat.codes
+                                )
 
     def _scale_columns(self):
-        self.logger.info("Scaling columns...")
-        for col in self.data.select_dtypes(include="number").columns.tolist():
-            if col in self.recipe["actions"]["obfuscate"]:
-                continue
+        with ProgressMessage("Scaling columns..."):
+            for col in self.data.select_dtypes(include="number").columns.tolist():
+                if col in self.recipe["actions"]["obfuscate"]:
+                    continue
 
-            skip_scaling = False
-            no_scaling = self.recipe["actions"].get("skip-scaling", [])
-            for pat in no_scaling:
-                if re.fullmatch(pat, col):
-                    skip_scaling = True
-                    break
+                skip_scaling = False
+                no_scaling = self.recipe["actions"].get("skip-scaling", [])
+                for pat in no_scaling:
+                    if re.fullmatch(pat, col):
+                        skip_scaling = True
+                        break
 
-            if not skip_scaling:
-                if self.limits is not None and col in self.limits:
-                    min, max = self.limits[col]["min"], self.limits[col]["max"]
-                    if pd.isna(min):
-                        min = self.data[col].min()
-                    if pd.isna(max):
-                        max = self.data[col].max()
-                    self._report_log("SCALE_CUSTOM", col, f"[{min},{max}]")
-                    if not self.dry_run:
-                        self.data[col] = (self.data[col] - min) / (max - min)
-                else:
-                    self._report_log(
-                        "SCALE_DEFAULT",
-                        col,
-                        f"[{self.data[col].min()},{self.data[col].max()}]",
-                    )
-                    if not self.dry_run:
-                        self.data[col] = (self.data[col] - self.data[col].min()) / (
-                            self.data[col].max() - self.data[col].min()
+                if not skip_scaling:
+                    if self.limits is not None and col in self.limits:
+                        min, max = self.limits[col]["min"], self.limits[col]["max"]
+                        if pd.isna(min):
+                            min = self.data[col].min()
+                        if pd.isna(max):
+                            max = self.data[col].max()
+                        self._report_log("SCALE_CUSTOM", col, f"[{min},{max}]")
+                        if not self.dry_run:
+                            self.data[col] = (self.data[col] - min) / (max - min)
+                    else:
+                        self._report_log(
+                            "SCALE_DEFAULT",
+                            col,
+                            f"[{self.data[col].min()},{self.data[col].max()}]",
                         )
+                        if not self.dry_run:
+                            self.data[col] = (self.data[col] - self.data[col].min()) / (
+                                self.data[col].max() - self.data[col].min()
+                            )
 
     def _rename_columns(self):
         if "rename" in self.recipe["actions"]:
-            self.logger.info("Renaming columns...")
-            for renaming in self.recipe["actions"]["rename"]:
-                pat, repl = renaming.popitem()
-                pat = re.compile(pat)
+            with ProgressMessage("Renaming columns..."):
+                for renaming in self.recipe["actions"]["rename"]:
+                    pat, repl = renaming.popitem()
+                    pat = re.compile(pat)
 
-                # Apply regex substitution to all columns
-                replacements = {
-                    col: pat.sub(repl, col)
-                    for col in self.data.columns
-                    if pat.fullmatch(col)
-                }
+                    # Apply regex substitution to all columns
+                    replacements = {
+                        col: pat.sub(repl, col)
+                        for col in self.data.columns
+                        if pat.fullmatch(col)
+                    }
 
-                # Calculate the number of replacements with the same target
-                count = {repl: 0 for repl in replacements.values()}
-                for repl in replacements.values():
-                    count[repl] += 1
-                orig_count = count.copy()
+                    # Calculate the number of replacements with the same target
+                    count = {repl: 0 for repl in replacements.values()}
+                    for repl in replacements.values():
+                        count[repl] += 1
+                    orig_count = count.copy()
 
-                # Append a number to the end of the target if there are multiple
-                for col, repl in replacements.items():
-                    if orig_count[repl] > 1:
-                        replacements[
-                            col
-                        ] = f"{repl}_{orig_count[repl]-count[repl]+1}"  # TODO: Make the pattern configurable
-                        count[repl] -= 1
+                    # Append a number to the end of the target if there are multiple
+                    for col, repl in replacements.items():
+                        if orig_count[repl] > 1:
+                            replacements[
+                                col
+                            ] = f"{repl}_{orig_count[repl]-count[repl]+1}"  # TODO: Make the pattern configurable
+                            count[repl] -= 1
 
-                # Rename the columns
-                for col, repl in replacements.items():
-                    self._report_log("RENAME", col, repl)
-                    if not self.dry_run:
-                        self.data.rename(columns={col: repl}, inplace=True)
+                    # Rename the columns
+                    for col, repl in replacements.items():
+                        self._report_log("RENAME", col, repl)
+                        if not self.dry_run:
+                            self.data.rename(columns={col: repl}, inplace=True)
 
     def release_prep(self):
         self._drop_columns()
@@ -255,6 +257,8 @@ class DataReleasePrep:
                 )
 
     def generate_report(self):
-        self.logger.info("Generating report...")
-        report_df = pd.DataFrame(self.report, columns=["action", "column", "details"])
-        report_df.to_csv(Path(self.output_file).stem + "_report.csv", index=True)
+        with ProgressMessage("Generating report..."):
+            report_df = pd.DataFrame(
+                self.report, columns=["action", "column", "details"]
+            )
+            report_df.to_csv(Path(self.output_file).stem + "_report.csv", index=True)
