@@ -138,19 +138,23 @@ class DataReleasePrep:
     def _drop_columns(self):
         if "drop" in self.recipe["actions"]:
             self.logger.info("Dropping columns...")
+            cols_to_drop = []
             for pat in self.recipe["actions"]["drop"]:
                 for col in self.data.columns:
                     if re.fullmatch(pat, col):
                         self._report_log("DROP", col, "")
-                        self.data.drop(col, axis=1, inplace=True)
+                        cols_to_drop.append(col)
+            self.data.drop(cols_to_drop, axis=1, inplace=True)
 
     def _drop_constant_columns(self):
         if self.recipe["actions"].get("drop-constant-columns", False):
             self.logger.info("Dropping constant columns...")
+            cols_to_drop = []
             for col in self.data.columns:
                 if self.data[col].nunique() == 1:
                     self._report_log("DROP_CONSTANT", col, "")
-                    self.data.drop(col, axis=1, inplace=True)
+                    cols_to_drop.append(col)
+            self.data.drop(cols_to_drop, axis=1, inplace=True)
 
     def _obfuscate_columns(self):
         if "obfuscate" in self.recipe["actions"]:
