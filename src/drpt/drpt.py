@@ -206,17 +206,18 @@ class DataReleasePrep:
         if not self.no_scaling:
             self._scale_columns()
         self._rename_columns()
-        if self.input_file_suffix == ".csv":
-            self.data.to_csv(
-                self.output_file,
-                index=False,
-            )
-        elif self.input_file_suffix == ".parquet":
-            self.data.to_parquet(
-                self.output_file,
-                engine="pyarrow",
-                index=False,
-            )
+        if not self.dry_run:
+            if self.input_file_suffix == ".csv":
+                self.data.to_csv(
+                    self.output_file,
+                    index=False,
+                )
+            elif self.input_file_suffix == ".parquet":
+                self.data.to_parquet(
+                    self.output_file,
+                    engine="pyarrow",
+                    index=False,
+                )
 
     def generate_report(self):
         report_df = pd.DataFrame(self.report, columns=["column", "action", "details"])
