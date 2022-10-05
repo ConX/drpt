@@ -133,3 +133,7 @@ dmypy.json
 
 # Pipenv
 Pipfile.lock
+
+# Test files - Temporary files
+*.json
+*.csv
