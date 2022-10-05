@@ -33,9 +33,11 @@ RECIPE_SCHEMA = {
                     "type": "array",
                     "items": {"type": "string"},
                 },
+                "drop-constant-columns": {"type": "boolean"},
             },
         },
     },
+    "required": ["version", "actions"],
 }
 
 
@@ -55,11 +57,11 @@ class DataReleasePrep:
         self.recipe_file = recipe_file
         self.input_file = input_file
         self.output_file = output_file
+        self.limits_file = limits_file
         self.dry_run = dry_run
         self.verbose = verbose
         self.nrows = nrows
         self.no_scaling = no_scaling
-        self.limits_file = limits_file
         self.limits = None
         self.report = []
         self.logger = None
@@ -125,6 +127,15 @@ class DataReleasePrep:
                         self._report_log("DROP", col, "")
                         if not self.dry_run:
                             self.data.drop(col, axis=1, inplace=True)
+
+    def _drop_constant_columns(self):
+        if self.recipe["actions"].get("drop-constant-columns", False):
+            self.logger.info("Dropping constant columns...")
+            for col in self.data.columns:
+                if self.data[col].nunique() == 1:
+                    self._report_log("DROP_CONSTANT", col, "")
+                    if not self.dry_run:
+                        self.data.drop(col, axis=1, inplace=True)
 
     def _rename_columns(self):
         if "rename" in self.recipe["actions"]:
@@ -224,6 +235,7 @@ class DataReleasePrep:
 
     def release_prep(self):
         self._drop_columns()
+        self._drop_constant_columns()
         self._obfuscate_columns()
         if not self.no_scaling:
             self._scale_columns()
