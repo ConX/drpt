@@ -149,7 +149,7 @@ class DataReleasePrep:
                             self.data[col] = self.data[col].astype("category").cat.codes
 
     def _scale_columns(self):
-        for col in self.data.columns:
+        for col in self.data.select_dtypes(include="numerics").columns.tolist():
             if col in self.recipe["actions"]["obfuscate"]:
                 continue
 
