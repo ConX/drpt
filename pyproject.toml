@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "drpt"
-version = "0.1.0"
+version = "0.2.6"
 description = "Tool for preparing a dataset for publishing by dropping, renaming, scaling, and obfuscating columns defined in a recipe."
 readme = "README.md"
 authors = [{ name = "Constantinos Xanthopoulos", email = "conx@xanthopoulos.info" }]
@@ -44,6 +44,7 @@ push = true
 
 [tool.bumpver.file_patterns]
 "pyproject.toml" = [
+    'version = "{version}"',
     'current_version = "{version}"',
 ]
 "src/drpt/__init__.py" = [
