@@ -1,24 +1,12 @@
 # Data Release Preparation Tool
 
-<!-- @import "[TOC]" {cmd="toc" depthFrom=1 depthTo=6 orderedList=false} -->
-
-<!-- code_chunk_output -->
-
 - [Data Release Preparation Tool](#data-release-preparation-tool)
   - [Description](#description)
-  - [Recipes Definition](#recipes-definition)
-    - [Overview](#overview)
-    - [Actions](#actions)
-      - [_drop_](#drop)
-      - [_rename_](#rename)
-      - [_obfuscate_](#obfuscate)
-      - [_no-scaling_](#no-scaling)
   - [Usage](#usage)
+    - [CLI](#cli)
+    - [Recipe Definition](#recipe-definition)
   - [Example](#example)
   - [Thanks](#thanks)
-
-<!-- /code_chunk_output -->
-
 
 > :warning: This is currently at beta development stage and likely has a lot of bugs. Please use the [issue tracker](https://github.com/ConX/drpt/issues) to report an bugs or feature requests.
 
@@ -28,9 +16,27 @@ Command-line tool for preparing a dataset for publishing by dropping, renaming, 
 
 After performing the operations defined in the recipe the tool generates the transformed dataset version and a CSV report listing the performed actions.
 
-## Recipes Definition
+## Usage
 
-### Overview
+### CLI
+
+```txt
+Usage: drpt [OPTIONS] RECIPE_FILE INPUT_FILE
+
+Options:
+  -d, --dry-run           Generate only the report without the release dataset
+  -v, --verbose           Verbose [Not implemented]
+  -n, --nrows TEXT        Number of rows to read from a CSV file. Doesn't work with parquet files.
+  -ns, --no-scaling       Disable default Min/Max scaling
+  -l, --limits-file PATH  Limits file
+  -o, --output-file PATH  Output file
+  --version               Show the version and exit.
+  --help                  Show this message and exit
+```
+
+### Recipe Definition
+
+#### Overview
 
 The recipe is a JSON formatted file that includes what operations should be performed on the dataset. For versioning purposes, the recipe also contains a `version` key which is appended in the generated filenames and the report.
 
@@ -55,13 +61,13 @@ The currently supported actions are:
 
 All column definitions above support [regular expressions](https://docs.python.org/3/library/re.html#regular-expression-syntax).
 
-### Actions
+#### Actions
 
-#### _drop_
+##### _drop_
 
 The `drop` action is defined as a list of column names to be dropped.
 
-#### _rename_
+##### _rename_
 
 The `rename` action is defined as a list of objects whose key is the original name (or regular expression), and their value is the target name. When the target uses matched groups from the regular expression those can be provided with their group number prepended with an escaped backslash (`\\1`) [see [example](#example) below].
 
@@ -73,29 +79,14 @@ The `rename` action is defined as a list of objects whose key is the original na
 }
 ```
 
-#### _obfuscate_
+##### _obfuscate_
 
 The `obfuscate` action is defined as a list of column names to be obfuscated. 
 
-#### _no-scaling_
+##### _no-scaling_
 
 By default, the tool Min/Max scales all numerical columns unless the `--no-scaling` command line option is provided. If scaling must be disabled for only a set of columns these columns can be defined using the `no-scaling` action, as a list of column names.
 
-
-## Usage
-```txt
-Usage: drpt [OPTIONS] RECIPE_FILE INPUT_FILE
-
-Options:
-  -d, --dry-run           Generate only the report without the release dataset
-  -v, --verbose           Verbose [Not implemented]
-  -n, --nrows TEXT        Number of rows to read from a CSV file. Doesn't work with parquet files.
-  -ns, --no-scaling       Disable default Min/Max scaling
-  -l, --limits-file PATH  Limits file
-  -o, --output-file PATH  Output file
-  --version               Show the version and exit.
-  --help                  Show this message and exit
-```
 
 ## Example
 
