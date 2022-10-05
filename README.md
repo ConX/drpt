@@ -1,6 +1,26 @@
 # Data Release Preparation Tool
 
-> :warning: This is currently at beta development stage and likely has a lot of bugs. Use the [issue tracker](https://github.com/ConX/drpt/issues) to report an bugs or feature requests.
+<!-- @import "[TOC]" {cmd="toc" depthFrom=1 depthTo=6 orderedList=false} -->
+
+<!-- code_chunk_output -->
+
+- [Data Release Preparation Tool](#data-release-preparation-tool)
+  - [Description](#description)
+  - [Recipes Definition](#recipes-definition)
+    - [Overview](#overview)
+    - [Actions](#actions)
+      - [_drop_](#drop)
+      - [_rename_](#rename)
+      - [_obfuscate_](#obfuscate)
+      - [_no-scaling_](#no-scaling)
+  - [Usage](#usage)
+  - [Example <a name="example"></a>](#example-)
+  - [Thanks](#thanks)
+
+<!-- /code_chunk_output -->
+
+
+> :warning: This is currently at beta development stage and likely has a lot of bugs. Please use the [issue tracker](https://github.com/ConX/drpt/issues) to report an bugs or feature requests.
 
 ## Description
 
@@ -8,7 +28,9 @@ Command-line tool for preparing a dataset for publishing by dropping, renaming, 
 
 After performing the operations defined in the recipe the tool generates the transformed dataset version and a CSV report listing the performed actions.
 
-## Recipe 
+## Recipes Definition
+
+### Overview
 
 The recipe is a JSON formatted file that includes what operations should be performed on the dataset. For versioning purposes, the recipe also contains a `version` key which is appended in the generated filenames and the report.
 
@@ -29,9 +51,36 @@ The currently supported actions are:
   - `drop`: Column deletion
   - `rename`: Column renaming
   - `obfuscate`: Column obfuscation, where the listed columns are treated as categorical variables and then integer coded.
-  - Column scaling, where by default all columns are Min/Max scaled, except those excluded (`no-scaling`). To disable scaling the `--no-scaling` command-line option can be used.
+  - Column scaling, where by default all columns are Min/Max scaled, except those excluded (`no-scaling`)
 
-All column definitions above support regular expressions.
+All column definitions above support [regular expressions](https://docs.python.org/3/library/re.html#regular-expression-syntax).
+
+### Actions
+
+#### _drop_
+
+The `drop` action is defined as a list of column names to be dropped.
+
+#### _rename_
+
+The `rename` action is defined as a list of objects whose key is the original name (or regular expression), and their value is the target name. When the target uses matched groups from the regular expression those can be provided with their group number prepended with an escaped backslash (`\\1`) [see [example](#example) below].
+
+```json
+{
+  //...
+  "rename": [{"original_name": "target_name"}]
+  //...
+}
+```
+
+#### _obfuscate_
+
+The `obfuscate` action is defined as a list of column names to be obfuscated. 
+
+#### _no-scaling_
+
+By default, the tool Min/Max scales all numerical columns unless the `--no-scaling` command line option is provided. If scaling must be disabled for only a set of columns these columns can be defined using the `no-scaling` action, as a list of column names.
+
 
 ## Usage
 ```txt
@@ -48,7 +97,7 @@ Options:
   --help                  Show this message and exit
 ```
 
-### Example
+## Example <a name="example"></a>
 
 **Input file:**
 ```csv
@@ -86,18 +135,24 @@ test1_renamed,test3_regex_renamed,test4_regex_renamed,test5,test6,test7
 
 **Report:**
 ```txt
-,column,action,details
-0,test2,dropped,
-1,test8,dropped,
-2,test9,dropped,
-3,test3,obfuscated,
-4,test1,scaled,0.0 - 1.0
-5,test5,scaled,0.0 - 1.0
-6,test6,scaled,0.0 - 1.0
-7,test7,scaled,0.0 - 1.0
-8,test1,renamed,test1_renamed
-9,test3,renamed,test3_regex_renamed
-10,test4,renamed,test4_regex_renamed
+,action,column,details
+0,recipe_version,,1.0
+1,drpt_version,,0.2.2
+2,DROP,test2,
+3,DROP,test8,
+4,DROP,test9,
+5,OBFUSCATE,test3,
+6,SCALE,test1,1.1 - 3.3
+7,SCALE,test5,0.1 - 1.0
+8,SCALE,test6,0.0 - 5.0
+9,SCALE,test7,-1.0 - 2.5
+10,SCALE,foo.bar.test,1 - 4
+11,SCALE,foo.bar.test2,1 - 4
+12,RENAME,test1,test1_renamed
+13,RENAME,test3,test3_regex_renamed
+14,RENAME,test4,test4_regex_renamed
+15,RENAME,foo.bar.test,foo_1
+16,RENAME,foo.bar.test2,foo_2
 ```
 
 ## Thanks

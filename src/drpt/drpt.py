@@ -1,5 +1,6 @@
 #!/usr/bin/env python3.9
 import json
+import logging
 import re
 from pathlib import Path
 
@@ -65,6 +66,7 @@ class DataReleasePrep:
         self.input_file_stem = Path(self.input_file).stem
         self.input_file_suffix = Path(self.input_file).suffix
 
+        self._init_logger()
         self._check_cmd_args()
         self._read_check_recipe()
         self.data = self._read_data()
@@ -72,10 +74,23 @@ class DataReleasePrep:
         if self.limits_file is not None:
             self._read_limits()
 
-        self._log("drpt_version", "", tool_version)
+        self._report_log("drpt_version", "", tool_version)
 
-    def _log(self, action, column, details):
+    def _init_logger(self):
+        self.logger = logging.getLogger("drpt")
+        self.logger.setLevel(logging.INFO)
+        handler = logging.StreamHandler()
+        handler.setLevel(logging.WARNING)
+        formatter = logging.Formatter("%(message)s")
+        handler.setFormatter(formatter)
+        self.logger.addHandler(handler)
+
+    def _report_log(self, action, column, details):
         self.report.append((action, column, details))
+
+    def _console_log(self, msg):
+        if self.verbose:
+            print(msg)
 
     def _check_cmd_args(self):
         if self.recipe_file is None and self.generate_recipe is False:
@@ -93,27 +108,31 @@ class DataReleasePrep:
                 + self.recipe["version"]
                 + self.input_file_suffix
             )
-        self._log("recipe_version", "", self.recipe["version"])
+        self._report_log("recipe_version", "", self.recipe["version"])
 
     def _read_data(self):
         if self.input_file.endswith(".csv"):
+            self.logger.info("Reading CSV data...")
             data = pd.read_csv(self.input_file, nrows=self.nrows)
         elif self.input_file.endswith(".parquet"):
+            self.logger.info("Reading Parquet data...")
             # FIXME: Add message to say that nrows is not supported for parquet
             data = pd.read_parquet(self.input_file, engine="pyarrow")
         return data
 
     def _drop_columns(self):
         if "drop" in self.recipe["actions"]:
+            self.logger.info("Dropping columns...")
             for pat in self.recipe["actions"]["drop"]:
                 for col in self.data.columns:
                     if re.fullmatch(pat, col):
-                        self._log("DROP", col, "")
+                        self._report_log("DROP", col, "")
                         if not self.dry_run:
                             self.data.drop(col, axis=1, inplace=True)
 
     def _rename_columns(self):
         if "rename" in self.recipe["actions"]:
+            self.logger.info("Renaming columns...")
             for renaming in self.recipe["actions"]["rename"]:
                 pat, repl = renaming.popitem()
                 pat = re.compile(pat)
@@ -141,20 +160,22 @@ class DataReleasePrep:
 
                 # Rename the columns
                 for col, repl in replacements.items():
-                    self._log("RENAME", col, repl)
+                    self._report_log("RENAME", col, repl)
                     if not self.dry_run:
                         self.data.rename(columns={col: repl}, inplace=True)
 
     def _obfuscate_columns(self):
         if "obfuscate" in self.recipe["actions"]:
+            self.logger.info("Obfuscating columns...")
             for pat in self.recipe["actions"]["obfuscate"]:
                 for col in self.data.columns:
                     if re.fullmatch(pat, col):
-                        self._log("OBFUSCATE", col, "")
+                        self._report_log("OBFUSCATE", col, "")
                         if not self.dry_run:
                             self.data[col] = self.data[col].astype("category").cat.codes
 
     def _scale_columns(self):
+        self.logger.info("Scaling columns...")
         for col in self.data.select_dtypes(include="number").columns.tolist():
             if col in self.recipe["actions"]["obfuscate"]:
                 continue
@@ -173,11 +194,11 @@ class DataReleasePrep:
                         min = self.data[col].min()
                     if pd.isna(max):
                         max = self.data[col].max()
-                    self._log("SCALE", col, f"{min} - {max}")
+                    self._report_log("SCALE", col, f"{min} - {max}")
                     if not self.dry_run:
                         self.data[col] = (self.data[col] - min) / (max - min)
                 else:
-                    self._log(
+                    self._report_log(
                         "SCALE", col, f"{self.data[col].min()} - {self.data[col].max()}"
                     )
                     if not self.dry_run:
@@ -186,6 +207,7 @@ class DataReleasePrep:
                         )
 
     def _read_limits(self):
+        self.logger.info("Reading limits...")
         if Path(self.limits_file).suffix == ".csv":
             limits_df = pd.read_csv(
                 self.limits_file, header=None, skip_blank_lines=True
@@ -222,5 +244,6 @@ class DataReleasePrep:
                 )
 
     def generate_report(self):
+        self.logger.info("Generating report...")
         report_df = pd.DataFrame(self.report, columns=["action", "column", "details"])
         report_df.to_csv(Path(self.output_file).stem + "_report.csv", index=True)
