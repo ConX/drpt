@@ -35,7 +35,7 @@ Homepage = "https://github.com/ConX/drpt"
 drpt = "drpt.__main__:main"
 
 [tool.bumpver]
-current_version = "0.2.1"
+current_version = "0.2.2"
 version_pattern = "MAJOR.MINOR.PATCH[PYTAGNUM]"
 commit_message = "Bump version {old_version} -> {new_version}"
 commit = true
