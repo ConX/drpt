@@ -14,7 +14,7 @@
       - [_obfuscate_](#obfuscate)
       - [_no-scaling_](#no-scaling)
   - [Usage](#usage)
-  - [Example <a name="example"></a>](#example-)
+  - [Example](#example)
   - [Thanks](#thanks)
 
 <!-- /code_chunk_output -->
@@ -97,7 +97,7 @@ Options:
   --help                  Show this message and exit
 ```
 
-## Example <a name="example"></a>
+## Example
 
 **Input file:**
 ```csv
