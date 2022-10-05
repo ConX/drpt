@@ -107,6 +107,24 @@ class DataReleasePrep:
             )
         self._report_log("recipe_version", "", self.recipe["version"])
 
+    def _read_limits(self):
+        self.logger.info("Reading limits...")
+        if Path(self.limits_file).suffix == ".csv":
+            limits_df = pd.read_csv(
+                self.limits_file, header=None, skip_blank_lines=True
+            )
+            # Remove header row if present
+            if limits_df.iloc[0, :].tolist() == ["column", "min", "max"]:
+                limits_df.drop(0, inplace=True)
+
+            limits_df.columns = ["column", "min", "max"]
+            limits_df.set_index("column", inplace=True)
+            self.limits = limits_df.to_dict(orient="index")
+
+        # TODO: Implement JSON input
+        # if Path(self.limits_file).suffix == ".json":
+        #     self.limits = pd.read_json(self.limits_file, orient="records")
+
     def _read_data(self):
         if self.input_file.endswith(".csv"):
             self.logger.info("Reading CSV data...")
@@ -124,8 +142,7 @@ class DataReleasePrep:
                 for col in self.data.columns:
                     if re.fullmatch(pat, col):
                         self._report_log("DROP", col, "")
-                        if not self.dry_run:
-                            self.data.drop(col, axis=1, inplace=True)
+                        self.data.drop(col, axis=1, inplace=True)
 
     def _drop_constant_columns(self):
         if self.recipe["actions"].get("drop-constant-columns", False):
@@ -133,42 +150,7 @@ class DataReleasePrep:
             for col in self.data.columns:
                 if self.data[col].nunique() == 1:
                     self._report_log("DROP_CONSTANT", col, "")
-                    if not self.dry_run:
-                        self.data.drop(col, axis=1, inplace=True)
-
-    def _rename_columns(self):
-        if "rename" in self.recipe["actions"]:
-            self.logger.info("Renaming columns...")
-            for renaming in self.recipe["actions"]["rename"]:
-                pat, repl = renaming.popitem()
-                pat = re.compile(pat)
-
-                # Apply regex substitution to all columns
-                replacements = {
-                    col: pat.sub(repl, col)
-                    for col in self.data.columns
-                    if pat.fullmatch(col)
-                }
-
-                # Calculate the number of replacements with the same target
-                count = {repl: 0 for repl in replacements.values()}
-                for repl in replacements.values():
-                    count[repl] += 1
-                orig_count = count.copy()
-
-                # Append a number to the end of the target if there are multiple
-                for col, repl in replacements.items():
-                    if orig_count[repl] > 1:
-                        replacements[
-                            col
-                        ] = f"{repl}_{orig_count[repl]-count[repl]+1}"  # TODO: Make the pattern configurable
-                        count[repl] -= 1
-
-                # Rename the columns
-                for col, repl in replacements.items():
-                    self._report_log("RENAME", col, repl)
-                    if not self.dry_run:
-                        self.data.rename(columns={col: repl}, inplace=True)
+                    self.data.drop(col, axis=1, inplace=True)
 
     def _obfuscate_columns(self):
         if "obfuscate" in self.recipe["actions"]:
@@ -214,23 +196,39 @@ class DataReleasePrep:
                             self.data[col].max() - self.data[col].min()
                         )
 
-    def _read_limits(self):
-        self.logger.info("Reading limits...")
-        if Path(self.limits_file).suffix == ".csv":
-            limits_df = pd.read_csv(
-                self.limits_file, header=None, skip_blank_lines=True
-            )
-            # Remove header row if present
-            if limits_df.iloc[0, :].tolist() == ["column", "min", "max"]:
-                limits_df.drop(0, inplace=True)
+    def _rename_columns(self):
+        if "rename" in self.recipe["actions"]:
+            self.logger.info("Renaming columns...")
+            for renaming in self.recipe["actions"]["rename"]:
+                pat, repl = renaming.popitem()
+                pat = re.compile(pat)
 
-            limits_df.columns = ["column", "min", "max"]
-            limits_df.set_index("column", inplace=True)
-            self.limits = limits_df.to_dict(orient="index")
+                # Apply regex substitution to all columns
+                replacements = {
+                    col: pat.sub(repl, col)
+                    for col in self.data.columns
+                    if pat.fullmatch(col)
+                }
 
-        # TODO: Implement JSON input
-        # if Path(self.limits_file).suffix == ".json":
-        #     self.limits = pd.read_json(self.limits_file, orient="records")
+                # Calculate the number of replacements with the same target
+                count = {repl: 0 for repl in replacements.values()}
+                for repl in replacements.values():
+                    count[repl] += 1
+                orig_count = count.copy()
+
+                # Append a number to the end of the target if there are multiple
+                for col, repl in replacements.items():
+                    if orig_count[repl] > 1:
+                        replacements[
+                            col
+                        ] = f"{repl}_{orig_count[repl]-count[repl]+1}"  # TODO: Make the pattern configurable
+                        count[repl] -= 1
+
+                # Rename the columns
+                for col, repl in replacements.items():
+                    self._report_log("RENAME", col, repl)
+                    if not self.dry_run:
+                        self.data.rename(columns={col: repl}, inplace=True)
 
     def release_prep(self):
         self._drop_columns()
