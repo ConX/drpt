@@ -46,10 +46,10 @@ class ProgressMessage:
         self.message = message
 
     def __enter__(self):
-        print(f"⬜ {self.message}", end="\r")
+        print(f"⬜\t{self.message}", end="\r")
 
     def __exit__(self, exc_type, exc_value, traceback):
-        print(f"✅ {self.message}", end="\r\n")
+        print(f"✅\t{self.message}", end="\r\n")
 
 
 class DataReleasePrep:
@@ -182,12 +182,14 @@ class DataReleasePrep:
                         break
 
                 if not skip_scaling:
+                    col_min = self.data[col].min()
+                    col_max = self.data[col].max()
                     if self.limits is not None and col in self.limits:
                         min, max = self.limits[col]["min"], self.limits[col]["max"]
                         if pd.isna(min):
-                            min = self.data[col].min()
+                            min = col_min
                         if pd.isna(max):
-                            max = self.data[col].max()
+                            max = col_max
                         self._report_log("SCALE_CUSTOM", col, f"[{min},{max}]")
                         if not self.dry_run:
                             self.data[col] = (self.data[col] - min) / (max - min)
@@ -195,11 +197,11 @@ class DataReleasePrep:
                         self._report_log(
                             "SCALE_DEFAULT",
                             col,
-                            f"[{self.data[col].min()},{self.data[col].max()}]",
+                            f"[{col_min},{col_max}]",
                         )
                         if not self.dry_run:
-                            self.data[col] = (self.data[col] - self.data[col].min()) / (
-                                self.data[col].max() - self.data[col].min()
+                            self.data[col] = (self.data[col] - col_min) / (
+                                col_max - col_min
                             )
 
     def _rename_columns(self):
