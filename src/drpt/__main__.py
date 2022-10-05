@@ -1,3 +1,5 @@
+import traceback
+
 import click
 
 from drpt import __version__
@@ -23,6 +25,9 @@ from drpt.drpt import DataReleasePrep
 )
 @click.option("--limits-file", "-l", type=click.Path(exists=True), help="Limits file")
 @click.option("--output-file", "-o", type=click.Path(), help="Output file")
+@click.option(
+    "--debug", is_flag=True, help="Enable debug mode showing full trace", hidden=True
+)
 @click.argument("recipe-file", type=click.Path(exists=True))
 @click.argument("input-file", type=click.Path(exists=True))
 @click.version_option(version=__version__)
@@ -35,6 +40,7 @@ def main(
     verbose,
     nrows,
     no_scaling,
+    debug,
 ):
     """Data Release Preparation Tool (drpt)
 
@@ -54,6 +60,8 @@ def main(
         release.generate_report()
     except Exception as e:
         print(e)
+        if debug:
+            print(traceback.print_exc())
 
 
 if __name__ == "__main__":
