@@ -134,20 +134,20 @@ test1_renamed,test3_regex_renamed,test4_regex_renamed,test5,test6,test7
 ```
 
 **Report:**
-```txt
+```csv
 ,action,column,details
 0,recipe_version,,1.0
-1,drpt_version,,0.2.2
+1,drpt_version,,0.2.3
 2,DROP,test2,
 3,DROP,test8,
 4,DROP,test9,
 5,OBFUSCATE,test3,
-6,SCALE,test1,1.1 - 3.3
-7,SCALE,test5,0.1 - 1.0
-8,SCALE,test6,0.0 - 5.0
-9,SCALE,test7,-1.0 - 2.5
-10,SCALE,foo.bar.test,1 - 4
-11,SCALE,foo.bar.test2,1 - 4
+6,SCALE_DEFAULT,test1,"[1.1,3.3]"
+7,SCALE_DEFAULT,test5,"[0.1,1.0]"
+8,SCALE_DEFAULT,test6,"[0.0,5.0]"
+9,SCALE_DEFAULT,test7,"[-1.0,2.5]"
+10,SCALE_DEFAULT,foo.bar.test,"[1,4]"
+11,SCALE_DEFAULT,foo.bar.test2,"[1,4]"
 12,RENAME,test1,test1_renamed
 13,RENAME,test3,test3_regex_renamed
 14,RENAME,test4,test4_regex_renamed

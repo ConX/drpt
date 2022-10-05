@@ -194,12 +194,14 @@ class DataReleasePrep:
                         min = self.data[col].min()
                     if pd.isna(max):
                         max = self.data[col].max()
-                    self._report_log("SCALE", col, f"{min} - {max}")
+                    self._report_log("SCALE_CUSTOM", col, f"[{min},{max}]")
                     if not self.dry_run:
                         self.data[col] = (self.data[col] - min) / (max - min)
                 else:
                     self._report_log(
-                        "SCALE", col, f"{self.data[col].min()} - {self.data[col].max()}"
+                        "SCALE_DEFAULT",
+                        col,
+                        f"[{self.data[col].min()},{self.data[col].max()}]",
                     )
                     if not self.dry_run:
                         self.data[col] = (self.data[col] - self.data[col].min()) / (
