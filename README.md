@@ -36,7 +36,6 @@ Options:
   -d, --dry-run           Generate only the report without the release dataset
   -v, --verbose           Verbose [Not implemented]
   -n, --nrows TEXT        Number of rows to read from a CSV file. Doesn't work with parquet files.
-  -ns, --no-scaling       Disable default Min/Max scaling
   -l, --limits-file PATH  Limits file
   -o, --output-file PATH  Output file
   --version               Show the version and exit.
@@ -46,7 +45,6 @@ Options:
 ### Recipe Definition
 
 #### Overview
-
 The recipe is a JSON formatted file that includes what operations should be performed on the dataset. For versioning purposes, the recipe also contains a `version` key which is appended in the generated filenames and the report.
 
 **Default recipe:**
@@ -55,31 +53,41 @@ The recipe is a JSON formatted file that includes what operations should be perf
   "version": "",
   "actions": {
     "drop": [],
-    "rename": [],
+    "drop-constant-columns": false,
     "obfuscate": [],
-    "no-scaling": [],
-    "drop-constant-columns": false
+    "disable-scaling": false,
+    "skip-scaling": [],
+    "rename": []
   }
 }
 ```
 
-The currently supported actions are:
+The currently supported actions, performed in this order, are as follows:
   - `drop`: Column deletion
-  - `rename`: Column renaming
+  - `drop-constant-columns`: Drops all columns that containt only one unique value
   - `obfuscate`: Column obfuscation, where the listed columns are treated as categorical variables and then integer coded.
-  - Column scaling, where by default all columns are Min/Max scaled, except those excluded (`no-scaling`)
-  - `drop-constant-columns`: Drops any columns that containt only one unique value
+  - Scaling: By default all columns are Min/Max scaled
+    - `disable-scaling`: Can be used to disable scaling for all columns
+    - `skip-scaling`: By default all columns are Min/Max scaled, except those excluded (`skip-scaling`)
+  - `rename`: Column renaming
 
 All column definitions above support [regular expressions](https://docs.python.org/3/library/re.html#regular-expression-syntax).
 
 #### Actions
 
 ##### _drop_
-
 The `drop` action is defined as a list of column names to be dropped.
 
-##### _rename_
+##### _drop-constant-columns_
+This is a boolean action, which when set to `true` will drop all the columns that have only a single unique value.
 
+##### _obfuscate_
+The `obfuscate` action is defined as a list of column names to be obfuscated.
+
+##### _disable-scaling_, _skip-scaling_
+By default, the tool Min/Max scales all numerical columns. This behavior can be disabled for all columns by setting the `disable-scaling` action to `true`. If scaling must be disabled for only a set of columns these columns can be defined using the `skip-scaling` action, as a list of column names.
+
+##### _rename_
 The `rename` action is defined as a list of objects whose key is the original name (or regular expression), and their value is the target name. When the target uses matched groups from the regular expression those can be provided with their group number prepended with an escaped backslash (`\\1`) [see [example](#example) below].
 
 ```json
@@ -89,19 +97,6 @@ The `rename` action is defined as a list of objects whose key is the original na
   //...
 }
 ```
-
-##### _obfuscate_
-
-The `obfuscate` action is defined as a list of column names to be obfuscated. 
-
-##### _no-scaling_
-
-By default, the tool Min/Max scales all numerical columns unless the `--no-scaling` command line option is provided. If scaling must be disabled for only a set of columns these columns can be defined using the `no-scaling` action, as a list of column names.
-
-##### _drop-constant-columns_
-
-This is a boolean action, which when set to `true` will drop all the columns that have only a single unique value.
-
 ## Example
 
 **Input CSV file:**
@@ -119,14 +114,14 @@ test1,test2,test3,test4,test5,test6,test7,test8,test9,foo.bar.test,foo.bar.test2
   "version": "1.0",
   "actions": {
     "drop": ["test2", "test[8-9]"],
+    "drop-constant-columns": true,
+    "obfuscate": ["test3"],
+    "skip-scaling": ["test4"],
     "rename": [
       { "test1": "test1_renamed" },
       { "test([3-4])": "test\\1_regex_renamed" },
       { "foo[.]bar[.].*": "foo" }
-    ],
-    "obfuscate": ["test3"],
-    "no-scaling": ["test4"],
-    "drop-constant-columns": true
+    ]
   }
 }
 ```

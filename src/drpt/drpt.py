@@ -18,6 +18,16 @@ RECIPE_SCHEMA = {
                     "type": "array",
                     "items": {"type": "string"},
                 },
+                "drop-constant-columns": {"type": "boolean"},
+                "obfuscate": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                },
+                "disable-scaling": {"type": "boolean"},
+                "skip-scaling": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                },
                 "rename": {
                     "type": "array",
                     "items": {
@@ -25,15 +35,6 @@ RECIPE_SCHEMA = {
                         "patternProperties": {"^.*$": {"type": "string"}},
                     },
                 },
-                "obfuscate": {
-                    "type": "array",
-                    "items": {"type": "string"},
-                },
-                "no-scaling": {
-                    "type": "array",
-                    "items": {"type": "string"},
-                },
-                "drop-constant-columns": {"type": "boolean"},
             },
         },
     },
@@ -51,7 +52,6 @@ class DataReleasePrep:
         dry_run,
         verbose,
         nrows,
-        no_scaling,
         tool_version,
     ):
         self.recipe_file = recipe_file
@@ -61,7 +61,6 @@ class DataReleasePrep:
         self.dry_run = dry_run
         self.verbose = verbose
         self.nrows = nrows
-        self.no_scaling = no_scaling
         self.limits = None
         self.report = []
         self.logger = None
@@ -188,7 +187,7 @@ class DataReleasePrep:
                 continue
 
             skip_scaling = False
-            no_scaling = self.recipe["actions"].get("no-scaling", [])
+            no_scaling = self.recipe["actions"].get("skip-scaling", [])
             for pat in no_scaling:
                 if re.fullmatch(pat, col):
                     skip_scaling = True
@@ -237,7 +236,7 @@ class DataReleasePrep:
         self._drop_columns()
         self._drop_constant_columns()
         self._obfuscate_columns()
-        if not self.no_scaling:
+        if not self.recipe["actions"].get("disable-scaling", False):
             self._scale_columns()
         self._rename_columns()
         if not self.dry_run:

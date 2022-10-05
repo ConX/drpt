@@ -20,9 +20,6 @@ from drpt.drpt import DataReleasePrep
     default=None,
     help="Number of rows to read from a CSV file. Doesn't work with parquet files.",
 )
-@click.option(
-    "--no-scaling", "-ns", is_flag=True, help="Disable default Min/Max scaling"
-)
 @click.option("--limits-file", "-l", type=click.Path(exists=True), help="Limits file")
 @click.option("--output-file", "-o", type=click.Path(), help="Output file")
 @click.option(
@@ -39,7 +36,6 @@ def main(
     dry_run,
     verbose,
     nrows,
-    no_scaling,
     debug,
 ):
     """Data Release Preparation Tool (drpt)
@@ -54,7 +50,6 @@ def main(
             dry_run,
             verbose,
             nrows,
-            no_scaling,
             __version__,
         )
         release.release_prep()
