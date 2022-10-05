@@ -45,7 +45,6 @@ push = true
 [tool.bumpver.file_patterns]
 "pyproject.toml" = [
     'version = "{version}"',
-    'current_version = "{version}"',
 ]
 "src/drpt/__init__.py" = [
     '__version__ = "{version}"',
