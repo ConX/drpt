@@ -49,6 +49,7 @@ class DataReleasePrep:
         verbose,
         nrows,
         no_scaling,
+        tool_version,
     ):
         self.recipe_file = recipe_file
         self.input_file = input_file
@@ -71,6 +72,11 @@ class DataReleasePrep:
         if self.limits_file is not None:
             self._read_limits()
 
+        self._log("drpt_version", "", tool_version)
+
+    def _log(self, action, column, details):
+        self.report.append((action, column, details))
+
     def _check_cmd_args(self):
         if self.recipe_file is None and self.generate_recipe is False:
             raise ValueError("No recipe provided")
@@ -87,7 +93,7 @@ class DataReleasePrep:
                 + self.recipe["version"]
                 + self.input_file_suffix
             )
-        self.report.append(("", "version", self.recipe["version"]))
+        self._log("recipe_version", "", self.recipe["version"])
 
     def _read_data(self):
         if self.input_file.endswith(".csv"):
@@ -102,7 +108,7 @@ class DataReleasePrep:
             for pat in self.recipe["actions"]["drop"]:
                 for col in self.data.columns:
                     if re.fullmatch(pat, col):
-                        self.report.append((col, "dropped", ""))
+                        self._log("DROP", col, "")
                         if not self.dry_run:
                             self.data.drop(col, axis=1, inplace=True)
 
@@ -135,7 +141,7 @@ class DataReleasePrep:
 
                 # Rename the columns
                 for col, repl in replacements.items():
-                    self.report.append((col, "renamed", repl))
+                    self._log("RENAME", col, repl)
                     if not self.dry_run:
                         self.data.rename(columns={col: repl}, inplace=True)
 
@@ -144,7 +150,7 @@ class DataReleasePrep:
             for pat in self.recipe["actions"]["obfuscate"]:
                 for col in self.data.columns:
                     if re.fullmatch(pat, col):
-                        self.report.append((col, "obfuscated", ""))
+                        self._log("OBFUSCATE", col, "")
                         if not self.dry_run:
                             self.data[col] = self.data[col].astype("category").cat.codes
 
@@ -167,16 +173,12 @@ class DataReleasePrep:
                         min = self.data[col].min()
                     if pd.isna(max):
                         max = self.data[col].max()
-                    self.report.append((col, "scaled", f"{min} - {max}"))
+                    self._log("SCALE", col, f"{min} - {max}")
                     if not self.dry_run:
                         self.data[col] = (self.data[col] - min) / (max - min)
                 else:
-                    self.report.append(
-                        (
-                            col,
-                            "scaled",
-                            f"{self.data[col].min()} - {self.data[col].max()}",
-                        )
+                    self._log(
+                        "SCALE", col, f"{self.data[col].min()} - {self.data[col].max()}"
                     )
                     if not self.dry_run:
                         self.data[col] = (self.data[col] - self.data[col].min()) / (
@@ -220,5 +222,5 @@ class DataReleasePrep:
                 )
 
     def generate_report(self):
-        report_df = pd.DataFrame(self.report, columns=["column", "action", "details"])
+        report_df = pd.DataFrame(self.report, columns=["action", "column", "details"])
         report_df.to_csv(Path(self.output_file).stem + "_report.csv", index=True)

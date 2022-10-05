@@ -55,6 +55,7 @@ def main(
             verbose,
             nrows,
             no_scaling,
+            __version__,
         )
         release.release_prep()
         release.generate_report()
