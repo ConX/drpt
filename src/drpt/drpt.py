@@ -62,6 +62,7 @@ class DataReleasePrep:
         self.limits_file = limits_file
         self.limits = None
         self.report = []
+        self.logger = None
 
         self.input_file_stem = Path(self.input_file).stem
         self.input_file_suffix = Path(self.input_file).suffix
@@ -79,18 +80,13 @@ class DataReleasePrep:
     def _init_logger(self):
         self.logger = logging.getLogger("drpt")
         self.logger.setLevel(logging.INFO)
-        handler = logging.StreamHandler()
-        handler.setLevel(logging.WARNING)
-        formatter = logging.Formatter("%(message)s")
-        handler.setFormatter(formatter)
-        self.logger.addHandler(handler)
+        ch = logging.StreamHandler()
+        cf = logging.Formatter("%(message)s")
+        ch.setFormatter(cf)
+        self.logger.addHandler(ch)
 
     def _report_log(self, action, column, details):
         self.report.append((action, column, details))
-
-    def _console_log(self, msg):
-        if self.verbose:
-            print(msg)
 
     def _check_cmd_args(self):
         if self.recipe_file is None and self.generate_recipe is False:
