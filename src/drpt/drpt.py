@@ -59,6 +59,7 @@ class DataReleasePrep:
         self.no_scaling = no_scaling
         self.limits_file = limits_file
         self.limits = None
+        self.report = []
 
         self.input_file_stem = Path(self.input_file).stem
         self.input_file_suffix = Path(self.input_file).suffix
@@ -66,8 +67,6 @@ class DataReleasePrep:
         self._check_cmd_args()
         self._read_check_recipe()
         self.data = self._read_data()
-
-        self.report = []
 
         if self.limits_file is not None:
             self._read_limits()
@@ -111,12 +110,34 @@ class DataReleasePrep:
         if "rename" in self.recipe["actions"]:
             for renaming in self.recipe["actions"]["rename"]:
                 pat, repl = renaming.popitem()
-                for col in self.data.columns:
-                    if re.fullmatch(pat, col):
-                        sub = re.sub(pat, repl, col)
-                        self.report.append((col, "renamed", sub))
-                        if not self.dry_run:
-                            self.data.rename(columns={col: sub}, inplace=True)
+                pat = re.compile(pat)
+
+                # Apply regex substitution to all columns
+                replacements = {
+                    col: pat.sub(repl, col)
+                    for col in self.data.columns
+                    if pat.fullmatch(col)
+                }
+
+                # Calculate the number of replacements with the same target
+                count = {repl: 0 for repl in replacements.values()}
+                for repl in replacements.values():
+                    count[repl] += 1
+                orig_count = count.copy()
+
+                # Append a number to the end of the target if there are multiple
+                for col, repl in replacements.items():
+                    if orig_count[repl] > 1:
+                        replacements[
+                            col
+                        ] = f"{repl}_{orig_count[repl]-count[repl]+1}"  # TODO: Make the pattern configurable
+                        count[repl] -= 1
+
+                # Rename the columns
+                for col, repl in replacements.items():
+                    self.report.append((col, "renamed", repl))
+                    if not self.dry_run:
+                        self.data.rename(columns={col: repl}, inplace=True)
 
     def _obfuscate_columns(self):
         if "obfuscate" in self.recipe["actions"]:
