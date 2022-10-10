@@ -171,7 +171,7 @@ class DataReleasePrep:
     def _scale_columns(self):
         with ProgressMessage("Scaling columns..."):
             for col in self.data.select_dtypes(include="number").columns.tolist():
-                if col in self.recipe["actions"]["obfuscate"]:
+                if col in self.recipe["actions"].get("obfuscate", []):
                     continue
 
                 skip_scaling = False
