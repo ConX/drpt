@@ -4,7 +4,9 @@ import re
 from pathlib import Path
 
 import jsonschema
+import numpy as np
 import pandas as pd
+from dask import compute, delayed
 
 RECIPE_SCHEMA = {
     "type": "object",
@@ -39,6 +41,11 @@ RECIPE_SCHEMA = {
     },
     "required": ["version", "actions"],
 }
+
+
+@delayed
+def min_max_scale(s):
+    return (s - np.amin(s)) / (np.amax(s) - np.amin(s))
 
 
 class ProgressMessage:
@@ -172,6 +179,7 @@ class DataReleasePrep:
 
     def _scale_columns(self):
         with ProgressMessage("Scaling columns..."):
+            min_max_scale_cols = []
             for col in self.data.select_dtypes(include="number").columns.tolist():
                 if col in self.recipe["actions"].get("obfuscate", []):
                     continue
@@ -201,10 +209,12 @@ class DataReleasePrep:
                             col,
                             f"[{col_min},{col_max}]",
                         )
-                        if not self.dry_run:
-                            self.data[col] = (self.data[col] - col_min) / (
-                                col_max - col_min
-                            )
+                        min_max_scale_cols.append(col)
+
+            if not self.dry_run:
+                delayeds = [min_max_scale(self.data[col]) for col in min_max_scale_cols]
+                computed_columns = compute(delayeds, scheduler="processes")[0]
+                self.data[min_max_scale_cols] = pd.concat(computed_columns, axis=1)
 
     def _rename_columns(self):
         if "rename" in self.recipe["actions"]:

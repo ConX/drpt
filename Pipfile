@@ -11,6 +11,7 @@ click = "*"
 pyarrow = "*"
 jsonschema = "*"
 bumpver = "*"
+dask = "*"
 
 [dev-packages]
 twine = "*"
