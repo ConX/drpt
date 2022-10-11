@@ -48,6 +48,11 @@ def min_max_scale(s):
     return (s - np.amin(s)) / (np.amax(s) - np.amin(s))
 
 
+@delayed
+def min_max_scale_limits(s, min_limit, max_limit):
+    return (s - min_limit) / (max_limit - min_limit)
+
+
 class ProgressMessage:
     def __init__(self, message):
         self.message = message
@@ -179,7 +184,10 @@ class DataReleasePrep:
 
     def _scale_columns(self):
         with ProgressMessage("Scaling columns..."):
+            min_max_scale_limit_cols = []
             min_max_scale_cols = []
+            min_max_scale_limit_futures = []
+            min_max_scale_futures = []
             for col in self.data.select_dtypes(include="number").columns.tolist():
                 if col in self.recipe["actions"].get("obfuscate", []):
                     continue
@@ -202,19 +210,34 @@ class DataReleasePrep:
                             max = col_max
                         self._report_log("SCALE_CUSTOM", col, f"[{min},{max}]")
                         if not self.dry_run:
-                            self.data[col] = (self.data[col] - min) / (max - min)
+                            min_max_scale_limit_cols.append(col)
+                            min_max_scale_limit_futures.append(
+                                min_max_scale_limits(col, min, max)
+                            )
                     else:
                         self._report_log(
                             "SCALE_DEFAULT",
                             col,
                             f"[{col_min},{col_max}]",
                         )
-                        min_max_scale_cols.append(col)
+                        if not self.dry_run:
+                            min_max_scale_cols.append(col)
+                            min_max_scale_futures.append(min_max_scale(self.data[col]))
 
             if not self.dry_run:
-                delayeds = [min_max_scale(self.data[col]) for col in min_max_scale_cols]
-                computed_columns = compute(delayeds, scheduler="processes")[0]
-                self.data[min_max_scale_cols] = pd.concat(computed_columns, axis=1)
+                if len(min_max_scale_limit_futures) > 0:
+                    computed_columns = compute(
+                        *min_max_scale_limit_futures, scheduler="processes"
+                    )
+                    self.data[min_max_scale_limit_cols] = pd.concat(
+                        computed_columns, axis=1
+                    )
+
+                if len(min_max_scale_futures) > 0:
+                    computed_columns = compute(
+                        *min_max_scale_futures, scheduler="processes"
+                    )
+                    self.data[min_max_scale_cols] = pd.concat(computed_columns, axis=1)
 
     def _rename_columns(self):
         if "rename" in self.recipe["actions"]:
