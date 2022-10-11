@@ -46,10 +46,12 @@ class ProgressMessage:
         self.message = message
 
     def __enter__(self):
-        print(f"⬜\t{self.message}", end="\r")
+        print("\033[?25l", end="")
+        print(f" ⬜  {self.message}", end="\r")
 
     def __exit__(self, exc_type, exc_value, traceback):
-        print(f"✅\t{self.message}", end="\r\n")
+        print(f" ✅  {self.message}", end="\r\n")
+        print("\033[?25h", end="")
 
 
 class DataReleasePrep:

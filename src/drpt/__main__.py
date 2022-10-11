@@ -58,6 +58,7 @@ def main(
         print(e)
         if debug:
             print(traceback.print_exc())
+        print("\033[?25h", end="")
 
 
 if __name__ == "__main__":
