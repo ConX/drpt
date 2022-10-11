@@ -212,7 +212,7 @@ class DataReleasePrep:
                         if not self.dry_run:
                             min_max_scale_limit_cols.append(col)
                             min_max_scale_limit_futures.append(
-                                min_max_scale_limits(col, min, max)
+                                min_max_scale_limits(self.data[col], min, max)
                             )
                     else:
                         self._report_log(
