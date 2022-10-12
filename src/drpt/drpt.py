@@ -7,7 +7,6 @@ import jsonschema
 import numpy as np
 import pandas as pd
 from dask import compute, delayed
-from pyparsing import null_debug_action
 
 RECIPE_SCHEMA = {
     "type": "object",
@@ -238,13 +237,22 @@ class DataReleasePrep:
                             self._report_log("SCALE_CUSTOM", col, f"[{min},{max}]")
                             if not self.dry_run:
                                 min_max_scale_limit_cols.append(col)
-                                min_max_scale_limit_futures.append(
-                                    min_max_scale_limits(
-                                        self.data[col].to_numpy(na_value=np.nan),
-                                        min,
-                                        max,
+                                if self.data[col].dtype.name == "int64":
+                                    min_max_scale_limit_futures.append(
+                                        min_max_scale_limits(
+                                            self.data[col].to_numpy(
+                                                dtype=pd.Int64Dtype, na_value=np.nan
+                                            )
+                                        )
                                     )
-                                )
+                                else:
+                                    min_max_scale_limit_futures.append(
+                                        min_max_scale_limits(
+                                            self.data[col].to_numpy(na_value=np.nan),
+                                            min,
+                                            max,
+                                        )
+                                    )
                         else:
                             self._report_log(
                                 "SCALE_DEFAULT",
@@ -253,11 +261,20 @@ class DataReleasePrep:
                             )
                             if not self.dry_run:
                                 min_max_scale_cols.append(col)
-                                min_max_scale_futures.append(
-                                    min_max_scale(
-                                        self.data[col].to_numpy(na_value=np.nan)
+                                if self.data[col].dtype.name == "int64":
+                                    min_max_scale_futures.append(
+                                        min_max_scale(
+                                            self.data[col].to_numpy(
+                                                dtype=pd.Int64Dtype, na_value=np.nan
+                                            )
+                                        )
                                     )
-                                )
+                                else:
+                                    min_max_scale_futures.append(
+                                        min_max_scale(
+                                            self.data[col].to_numpy(na_value=np.nan)
+                                        )
+                                    )
 
             if not self.dry_run:
                 if len(min_max_scale_limit_futures) > 0:
@@ -299,6 +316,7 @@ class DataReleasePrep:
                             computed_columns,
                             left_index=True,
                             right_index=True,
+                            how="outer",
                         )
 
     def _rename_columns(self):
