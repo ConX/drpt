@@ -203,6 +203,7 @@ class DataReleasePrep:
 
     def _scale_columns(self):
         with ProgressMessage("Scaling columns...") as level1:
+            original_cols = self.data.columns.tolist()
             min_max_scale_limit_cols = []
             min_max_scale_cols = []
             min_max_scale_limit_futures = []
@@ -255,9 +256,14 @@ class DataReleasePrep:
                         computed_columns = compute(
                             *min_max_scale_limit_futures, scheduler="processes"
                         )
-                        self.data[min_max_scale_limit_cols] = pd.concat(
-                            computed_columns, axis=1
-                        )
+                        self.data.drop(min_max_scale_limit_cols, axis=1, inplace=True)
+                        computed_columns = pd.concat(computed_columns, axis=1)
+                        computed_columns.columns = min_max_scale_limit_cols
+                        self.data.merge(
+                            computed_columns,
+                            left_index=True,
+                            right_index=True,
+                        )[original_cols]
 
                 if len(min_max_scale_futures) > 0:
                     with ProgressMessage(
@@ -266,9 +272,17 @@ class DataReleasePrep:
                         computed_columns = compute(
                             *min_max_scale_futures, scheduler="processes"
                         )
-                        self.data[min_max_scale_cols] = pd.concat(
-                            computed_columns, axis=1
-                        )
+                        print("computed_columns")
+                        self.data.drop(min_max_scale_cols, axis=1, inplace=True)
+                        print("dropped")
+                        computed_columns = pd.concat(computed_columns, axis=1)
+                        print("concat")
+                        computed_columns.columns = min_max_scale_cols
+                        self.data.merge(
+                            computed_columns,
+                            left_index=True,
+                            right_index=True,
+                        )[original_cols]
 
     def _rename_columns(self):
         if "rename" in self.recipe["actions"]:
