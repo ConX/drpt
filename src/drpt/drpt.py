@@ -7,6 +7,7 @@ import jsonschema
 import numpy as np
 import pandas as pd
 from dask import compute, delayed
+from pyparsing import null_debug_action
 
 RECIPE_SCHEMA = {
     "type": "object",
@@ -239,7 +240,9 @@ class DataReleasePrep:
                                 min_max_scale_limit_cols.append(col)
                                 min_max_scale_limit_futures.append(
                                     min_max_scale_limits(
-                                        self.data[col].to_numpy(), min, max
+                                        self.data[col].to_numpy(na_value=np.nan),
+                                        min,
+                                        max,
                                     )
                                 )
                         else:
@@ -251,7 +254,9 @@ class DataReleasePrep:
                             if not self.dry_run:
                                 min_max_scale_cols.append(col)
                                 min_max_scale_futures.append(
-                                    min_max_scale(self.data[col].to_numpy())
+                                    min_max_scale(
+                                        self.data[col].to_numpy(na_value=np.nan)
+                                    )
                                 )
 
             if not self.dry_run:
