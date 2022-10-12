@@ -45,7 +45,13 @@ RECIPE_SCHEMA = {
 
 @delayed
 def min_max_scale(s):
-    return (s - np.amin(s)) / (np.amax(s) - np.amin(s))
+    min = np.nanmin(s)
+    max = np.nanmax(s)
+    if max == min:
+        exit(
+            " ❌ Scaling failed: There is at least one constant column.\n   Consider dropping constant columns, disabling or skip scaling."
+        )
+    return (s - min) / (max - min)
 
 
 @delayed
@@ -203,7 +209,6 @@ class DataReleasePrep:
 
     def _scale_columns(self):
         with ProgressMessage("Scaling columns...") as level1:
-            original_cols = self.data.columns.tolist()
             min_max_scale_limit_cols = []
             min_max_scale_cols = []
             min_max_scale_limit_futures = []
@@ -278,15 +283,12 @@ class DataReleasePrep:
                         computed_columns = compute(
                             *min_max_scale_futures, scheduler="processes"
                         )
-                        print("computed_columns")
                         self.data.drop(min_max_scale_cols, axis=1, inplace=True)
-                        print("dropped")
                         computed_columns = [
                             pd.Series(computed_column)
                             for computed_column in computed_columns
                         ]
                         computed_columns = pd.concat(computed_columns, axis=1)
-                        print("concatenated")
                         computed_columns.columns = min_max_scale_cols
                         self.data.merge(
                             computed_columns,
