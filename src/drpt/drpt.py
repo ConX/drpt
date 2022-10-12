@@ -54,16 +54,35 @@ def min_max_scale_limits(s, min_limit, max_limit):
 
 
 class ProgressMessage:
-    def __init__(self, message):
+    def __init__(self, message, parent=None):
         self.message = message
+        self.children = []
+        self.level = 0 if parent is None else parent.level + 1
+        if parent is not None:
+            if len(parent.children) == 0:
+                print("", end="\n")
+            parent.children.append(self)
 
     def __enter__(self):
         print("\033[?25l", end="")
+        print("  " * self.level, end="")
         print(f" ⬜  {self.message}", end="\r")
+        print("\b" * 10, end="")
+        return self
 
     def __exit__(self, exc_type, exc_value, traceback):
+        if len(self.children) > 0:
+            self._clear_line(len(self.children) + 1)
+        print("  " * self.level, end="")
         print(f" ✅  {self.message}", end="\r\n")
+        for child in self.children:
+            print("  " * (child.level), end="")
+            print(f" ✅  {child.message}", end="\r\n")
         print("\033[?25h", end="")
+
+    def _clear_line(self, n=1):
+        for _ in range(n):
+            print("\033[1A", end="\x1b[2K")
 
 
 class DataReleasePrep:
@@ -183,61 +202,73 @@ class DataReleasePrep:
                                 )
 
     def _scale_columns(self):
-        with ProgressMessage("Scaling columns..."):
+        with ProgressMessage("Scaling columns...") as level1:
             min_max_scale_limit_cols = []
             min_max_scale_cols = []
             min_max_scale_limit_futures = []
             min_max_scale_futures = []
-            for col in self.data.select_dtypes(include="number").columns.tolist():
-                if col in self.recipe["actions"].get("obfuscate", []):
-                    continue
+            with ProgressMessage("Preparing compute processes...", parent=level1):
+                for col in self.data.select_dtypes(include="number").columns.tolist():
+                    if col in self.recipe["actions"].get("obfuscate", []):
+                        continue
 
-                skip_scaling = False
-                no_scaling = self.recipe["actions"].get("skip-scaling", [])
-                for pat in no_scaling:
-                    if re.fullmatch(pat, col):
-                        skip_scaling = True
-                        break
+                    skip_scaling = False
+                    no_scaling = self.recipe["actions"].get("skip-scaling", [])
+                    for pat in no_scaling:
+                        if re.fullmatch(pat, col):
+                            skip_scaling = True
+                            break
 
-                if not skip_scaling:
-                    col_min = self.data[col].min()
-                    col_max = self.data[col].max()
-                    if self.limits is not None and col in self.limits:
-                        min, max = self.limits[col]["min"], self.limits[col]["max"]
-                        if pd.isna(min):
-                            min = col_min
-                        if pd.isna(max):
-                            max = col_max
-                        self._report_log("SCALE_CUSTOM", col, f"[{min},{max}]")
-                        if not self.dry_run:
-                            min_max_scale_limit_cols.append(col)
-                            min_max_scale_limit_futures.append(
-                                min_max_scale_limits(self.data[col], min, max)
+                    if not skip_scaling:
+                        col_min = self.data[col].min()
+                        col_max = self.data[col].max()
+                        if self.limits is not None and col in self.limits:
+                            min, max = self.limits[col]["min"], self.limits[col]["max"]
+                            if pd.isna(min):
+                                min = col_min
+                            if pd.isna(max):
+                                max = col_max
+                            self._report_log("SCALE_CUSTOM", col, f"[{min},{max}]")
+                            if not self.dry_run:
+                                min_max_scale_limit_cols.append(col)
+                                min_max_scale_limit_futures.append(
+                                    min_max_scale_limits(self.data[col], min, max)
+                                )
+                        else:
+                            self._report_log(
+                                "SCALE_DEFAULT",
+                                col,
+                                f"[{col_min},{col_max}]",
                             )
-                    else:
-                        self._report_log(
-                            "SCALE_DEFAULT",
-                            col,
-                            f"[{col_min},{col_max}]",
-                        )
-                        if not self.dry_run:
-                            min_max_scale_cols.append(col)
-                            min_max_scale_futures.append(min_max_scale(self.data[col]))
+                            if not self.dry_run:
+                                min_max_scale_cols.append(col)
+                                min_max_scale_futures.append(
+                                    min_max_scale(self.data[col])
+                                )
 
             if not self.dry_run:
                 if len(min_max_scale_limit_futures) > 0:
-                    computed_columns = compute(
-                        *min_max_scale_limit_futures, scheduler="processes"
-                    )
-                    self.data[min_max_scale_limit_cols] = pd.concat(
-                        computed_columns, axis=1
-                    )
+                    with ProgressMessage(
+                        "Running limit scaling processes...",
+                        parent=level1,
+                    ):
+                        computed_columns = compute(
+                            *min_max_scale_limit_futures, scheduler="processes"
+                        )
+                        self.data[min_max_scale_limit_cols] = pd.concat(
+                            computed_columns, axis=1
+                        )
 
                 if len(min_max_scale_futures) > 0:
-                    computed_columns = compute(
-                        *min_max_scale_futures, scheduler="processes"
-                    )
-                    self.data[min_max_scale_cols] = pd.concat(computed_columns, axis=1)
+                    with ProgressMessage(
+                        "Running default min/max scaling processes...", parent=level1
+                    ):
+                        computed_columns = compute(
+                            *min_max_scale_futures, scheduler="processes"
+                        )
+                        self.data[min_max_scale_cols] = pd.concat(
+                            computed_columns, axis=1
+                        )
 
     def _rename_columns(self):
         if "rename" in self.recipe["actions"]:
