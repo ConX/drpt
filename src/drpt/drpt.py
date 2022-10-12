@@ -233,7 +233,9 @@ class DataReleasePrep:
                             if not self.dry_run:
                                 min_max_scale_limit_cols.append(col)
                                 min_max_scale_limit_futures.append(
-                                    min_max_scale_limits(self.data[col], min, max)
+                                    min_max_scale_limits(
+                                        self.data[col].to_numpy(), min, max
+                                    )
                                 )
                         else:
                             self._report_log(
@@ -244,7 +246,7 @@ class DataReleasePrep:
                             if not self.dry_run:
                                 min_max_scale_cols.append(col)
                                 min_max_scale_futures.append(
-                                    min_max_scale(self.data[col])
+                                    min_max_scale(self.data[col].to_numpy())
                                 )
 
             if not self.dry_run:
@@ -257,13 +259,17 @@ class DataReleasePrep:
                             *min_max_scale_limit_futures, scheduler="processes"
                         )
                         self.data.drop(min_max_scale_limit_cols, axis=1, inplace=True)
+                        computed_columns = [
+                            pd.Series(computed_column)
+                            for computed_column in computed_columns
+                        ]
                         computed_columns = pd.concat(computed_columns, axis=1)
                         computed_columns.columns = min_max_scale_limit_cols
                         self.data.merge(
                             computed_columns,
                             left_index=True,
                             right_index=True,
-                        )[original_cols]
+                        )
 
                 if len(min_max_scale_futures) > 0:
                     with ProgressMessage(
@@ -275,14 +281,18 @@ class DataReleasePrep:
                         print("computed_columns")
                         self.data.drop(min_max_scale_cols, axis=1, inplace=True)
                         print("dropped")
+                        computed_columns = [
+                            pd.Series(computed_column)
+                            for computed_column in computed_columns
+                        ]
                         computed_columns = pd.concat(computed_columns, axis=1)
-                        print("concat")
+                        print("concatenated")
                         computed_columns.columns = min_max_scale_cols
                         self.data.merge(
                             computed_columns,
                             left_index=True,
                             right_index=True,
-                        )[original_cols]
+                        )
 
     def _rename_columns(self):
         if "rename" in self.recipe["actions"]:
