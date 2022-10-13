@@ -38,8 +38,10 @@ Options:
   -n, --nrows TEXT        Number of rows to read from a CSV file. Doesn't work
                           with parquet files.
   -l, --limits-file PATH  Limits file
+  -o, --output-dir PATH   Output directory. The default output directory is
+                          the same as the location of the recipe_file.
   --version               Show the version and exit.
-  --help                  Show this message and exit
+  --help                  Show this message and exit.
 ```
 
 ### Recipe Definition

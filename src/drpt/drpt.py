@@ -1,6 +1,7 @@
 #!/usr/bin/env python3.9
 import json
 import re
+from os import mkdir
 from pathlib import Path
 
 import jsonschema
@@ -100,6 +101,7 @@ class DataReleasePrep:
         dry_run,
         verbose,
         nrows,
+        output_directory,
         tool_version,
     ):
         self.recipe_file = recipe_file
@@ -111,7 +113,13 @@ class DataReleasePrep:
         self.limits = None
         self.report = []
 
-        self.output_directory = str(Path(self.recipe_file).parent.absolute()) + "/"
+        if output_directory is None:
+            self.output_directory = str(Path(self.recipe_file).parent.absolute()) + "/"
+        else:
+            self.output_directory = str(Path(output_directory).absolute()) + "/"
+            if not Path(self.output_directory).exists():
+                mkdir(self.output_directory)
+
         self.input_file_stem = Path(self.input_file).stem
         self.input_file_suffix = Path(self.input_file).suffix
 

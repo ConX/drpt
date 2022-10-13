@@ -22,6 +22,12 @@ from drpt.drpt import DataReleasePrep
 )
 @click.option("--limits-file", "-l", type=click.Path(exists=True), help="Limits file")
 @click.option(
+    "--output-dir",
+    "-o",
+    type=click.Path(exists=False),
+    help="Output directory. The default output directory is the same as the location of the recipe_file.",
+)
+@click.option(
     "--debug", is_flag=True, help="Enable debug mode showing full trace", hidden=True
 )
 @click.argument("recipe-file", type=click.Path(exists=True))
@@ -34,13 +40,12 @@ def main(
     dry_run,
     verbose,
     nrows,
+    output_dir,
     debug,
 ):
     """Data Release Preparation Tool (drpt)
 
     Tool for preparing a dataset for publishing by dropping, renaming, scaling, and obfuscating columns defined in a recipe.
-
-    The output directory is the same as the location of the recipe_file.
 
     For more details on the recipe definition, visit this page: https://github.com/ConX/drpt#recipe-definition
     """
@@ -52,6 +57,7 @@ def main(
             dry_run,
             verbose,
             nrows,
+            output_dir,
             __version__,
         )
         release.release_prep()
