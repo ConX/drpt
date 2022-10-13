@@ -292,7 +292,7 @@ class DataReleasePrep:
                         ]
                         computed_columns = pd.concat(computed_columns, axis=1)
                         computed_columns.columns = min_max_scale_limit_cols
-                        self.data.merge(
+                        self.data = self.data.merge(
                             computed_columns,
                             left_index=True,
                             right_index=True,
@@ -312,11 +312,10 @@ class DataReleasePrep:
                         ]
                         computed_columns = pd.concat(computed_columns, axis=1)
                         computed_columns.columns = min_max_scale_cols
-                        self.data.merge(
+                        self.data = self.data.merge(
                             computed_columns,
                             left_index=True,
                             right_index=True,
-                            how="outer",
                         )
 
     def _rename_columns(self):
