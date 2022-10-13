@@ -170,6 +170,10 @@ class DataReleasePrep:
             # FIXME: Add message to say that nrows is not supported for parquet
             with ProgressMessage("Reading Parquet data..."):
                 data = pd.read_parquet(self.input_file, engine="pyarrow")
+
+        # Force unique index
+        if not data.index.is_unique:
+            data = data.reset_index(drop=True)
         return data
 
     def _drop_columns(self):
