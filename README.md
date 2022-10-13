@@ -35,9 +35,9 @@ Usage: drpt [OPTIONS] RECIPE_FILE INPUT_FILE
 Options:
   -d, --dry-run           Generate only the report without the release dataset
   -v, --verbose           Verbose [Not implemented]
-  -n, --nrows TEXT        Number of rows to read from a CSV file. Doesn't work with parquet files.
+  -n, --nrows TEXT        Number of rows to read from a CSV file. Doesn't work
+                          with parquet files.
   -l, --limits-file PATH  Limits file
-  -o, --output-file PATH  Output file
   --version               Show the version and exit.
   --help                  Show this message and exit
 ```

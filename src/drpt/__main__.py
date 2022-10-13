@@ -21,7 +21,6 @@ from drpt.drpt import DataReleasePrep
     help="Number of rows to read from a CSV file. Doesn't work with parquet files.",
 )
 @click.option("--limits-file", "-l", type=click.Path(exists=True), help="Limits file")
-@click.option("--output-file", "-o", type=click.Path(), help="Output file")
 @click.option(
     "--debug", is_flag=True, help="Enable debug mode showing full trace", hidden=True
 )
@@ -31,7 +30,6 @@ from drpt.drpt import DataReleasePrep
 def main(
     recipe_file,
     input_file,
-    output_file,
     limits_file,
     dry_run,
     verbose,
@@ -40,12 +38,16 @@ def main(
 ):
     """Data Release Preparation Tool (drpt)
 
-    Tool for preparing a dataset for publishing by dropping, renaming, scaling, and obfuscating columns defined in a recipe."""
+    Tool for preparing a dataset for publishing by dropping, renaming, scaling, and obfuscating columns defined in a recipe.
+
+    The output directory is the same as the location of the recipe_file.
+
+    For more details on the recipe definition, visit this page: https://github.com/ConX/drpt#recipe-definition
+    """
     try:
         release = DataReleasePrep(
             recipe_file,
             input_file,
-            output_file,
             limits_file,
             dry_run,
             verbose,
