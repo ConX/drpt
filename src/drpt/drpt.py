@@ -96,7 +96,6 @@ class DataReleasePrep:
         self,
         recipe_file,
         input_file,
-        output_file,
         limits_file,
         dry_run,
         verbose,
@@ -105,7 +104,6 @@ class DataReleasePrep:
     ):
         self.recipe_file = recipe_file
         self.input_file = input_file
-        self.output_file = output_file
         self.limits_file = limits_file
         self.dry_run = dry_run
         self.verbose = verbose
@@ -113,6 +111,7 @@ class DataReleasePrep:
         self.limits = None
         self.report = []
 
+        self.output_directory = str(Path(self.recipe_file).parent.absolute()) + "/"
         self.input_file_stem = Path(self.input_file).stem
         self.input_file_suffix = Path(self.input_file).suffix
 
@@ -136,14 +135,13 @@ class DataReleasePrep:
         self.recipe = json.load(open(self.recipe_file))
         jsonschema.validate(self.recipe, RECIPE_SCHEMA)
 
-        # Define the output file if not given
-        if self.output_file is None:
-            self.output_file = (
-                self.input_file_stem
-                + "_release_"
-                + self.recipe["version"]
-                + self.input_file_suffix
-            )
+        self.output_file = (
+            self.output_directory
+            + self.input_file_stem
+            + "_release_"
+            + self.recipe["version"]
+            + self.input_file_suffix
+        )
         self._report_log("recipe_version", "", self.recipe["version"])
 
     def _read_limits(self):
@@ -379,4 +377,7 @@ class DataReleasePrep:
             report_df = pd.DataFrame(
                 self.report, columns=["action", "column", "details"]
             )
-            report_df.to_csv(Path(self.output_file).stem + "_report.csv", index=True)
+            report_df.to_csv(
+                self.output_directory + Path(self.output_file).stem + "_report.csv",
+                index=True,
+            )
