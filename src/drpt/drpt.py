@@ -203,11 +203,13 @@ class DataReleasePrep:
                 for pat in self.recipe["actions"]["obfuscate"]:
                     for col in self.data.columns:
                         if re.fullmatch(pat, col):
-                            self._report_log("OBFUSCATE", col, "")
+                            col_cat = self.data[col].astype("category").cat
+                            col_cat_map = {
+                                cat: code for code, cat in enumerate(col_cat.categories)
+                            }
+                            self._report_log("OBFUSCATE", col, json.dumps(col_cat_map))
                             if not self.dry_run:
-                                self.data[col] = (
-                                    self.data[col].astype("category").cat.codes
-                                )
+                                self.data[col] = col_cat.codes
 
     def _scale_columns(self):
         with ProgressMessage("Scaling columns...") as level1:
