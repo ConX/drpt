@@ -246,6 +246,9 @@ class DataReleasePrep:
                                 min = col_min
                             if pd.isna(max):
                                 max = col_max
+                            assert max > min, (
+                                "Max must be greater than min for column " + col
+                            )
                             self._report_log("SCALE_CUSTOM", col, f"[{min},{max}]")
                             if not self.dry_run:
                                 min_max_scale_limit_cols.append(col)
