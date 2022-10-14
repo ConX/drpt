@@ -244,7 +244,7 @@ class DataReleasePrep:
                         col_max = self.data[col].max()
                         if self.limits is not None and col in self.limits:
                             min, max = self.limits[col]["min"], self.limits[col]["max"]
-                            if min == max:
+                            if min == max or (pd.isna(min) and pd.isna(max)):
                                 self._report_log(
                                     "WARNING",
                                     col,
