@@ -227,9 +227,11 @@ class DataReleasePrep:
             min_max_scale_futures = []
             with ProgressMessage("Preparing compute processes...", parent=level1):
                 for col in self.data.select_dtypes(include="number").columns.tolist():
+                    # Skip column if it has been obfuscated already
                     if col in self.recipe["actions"].get("obfuscate", []):
                         continue
 
+                    # Skip column if it matches skip-scaling pattern
                     skip_scaling = False
                     no_scaling = self.recipe["actions"].get("skip-scaling", [])
                     for pat in no_scaling:
@@ -242,14 +244,35 @@ class DataReleasePrep:
                         col_max = self.data[col].max()
                         if self.limits is not None and col in self.limits:
                             min, max = self.limits[col]["min"], self.limits[col]["max"]
-                            if pd.isna(min):
-                                min = col_min
-                            if pd.isna(max):
-                                max = col_max
+                            if min == max:
+                                self._report_log(
+                                    "WARNING",
+                                    col,
+                                    f"Custom limits are the same: {min}. Reverting to min/max",
+                                )
+                                min, max = col_min, col_max
+                                self._report_log("SCALE_DEFAULT", col, f"[{min},{max}]")
+                            else:
+                                if pd.isna(min):
+                                    min = col_min
+                                    self._report_log(
+                                        "WARNING",
+                                        col,
+                                        "Custom min limit is NaN. Generating from data.",
+                                    )
+                                if pd.isna(max):
+                                    max = col_max
+                                    self._report_log(
+                                        "WARNING",
+                                        col,
+                                        "Custom max limit is NaN. Generating from data.",
+                                    )
+                                self._report_log("SCALE_CUSTOM", col, f"[{min},{max}]")
+
                             assert max > min, (
                                 "Max must be greater than min for column " + col
                             )
-                            self._report_log("SCALE_CUSTOM", col, f"[{min},{max}]")
+
                             if not self.dry_run:
                                 min_max_scale_limit_cols.append(col)
                                 if self.data[col].dtype.name == "int64":
@@ -257,7 +280,9 @@ class DataReleasePrep:
                                         min_max_scale_limits(
                                             self.data[col].to_numpy(
                                                 dtype=pd.Int64Dtype, na_value=np.nan
-                                            )
+                                            ),
+                                            min,
+                                            max,
                                         )
                                     )
                                 else:
