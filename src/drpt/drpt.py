@@ -38,9 +38,11 @@ RECIPE_SCHEMA = {
                     },
                 },
             },
+            "additionalProperties": False,
         },
     },
     "required": ["version", "actions"],
+    "additionalProperties": False,
 }
 
 
