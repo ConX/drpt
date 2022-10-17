@@ -59,6 +59,7 @@ The recipe is a JSON formatted file that includes what operations should be perf
     "obfuscate": [],
     "disable-scaling": false,
     "skip-scaling": [],
+    "sort-by": [],
     "rename": []
   }
 }
@@ -71,6 +72,7 @@ The currently supported actions, performed in this order, are as follows:
   - Scaling: By default all columns are Min/Max scaled
     - `disable-scaling`: Can be used to disable scaling for all columns
     - `skip-scaling`: By default all columns are Min/Max scaled, except those excluded (`skip-scaling`)
+  - `sort-by`: Sort rows by the listed columns
   - `rename`: Column renaming
 
 All column definitions above support [regular expressions](https://docs.python.org/3/library/re.html#regular-expression-syntax).
@@ -88,6 +90,9 @@ The `obfuscate` action is defined as a list of column names to be obfuscated.
 
 ##### _disable-scaling_, _skip-scaling_
 By default, the tool Min/Max scales all numerical columns. This behavior can be disabled for all columns by setting the `disable-scaling` action to `true`. If scaling must be disabled for only a set of columns these columns can be defined using the `skip-scaling` action, as a list of column names.
+
+##### _sort-by_
+This is a list of column names by which to sort the rows. The order in the list denotes the sorting priority.
 
 ##### _rename_
 The `rename` action is defined as a list of objects whose key is the original name (or regular expression), and their value is the target name. When the target uses matched groups from the regular expression those can be provided with their group number prepended with an escaped backslash (`\\1`) [see [example](#example) below].
@@ -119,6 +124,7 @@ test1,test2,test3,test4,test5,test6,test7,test8,test9,foo.bar.test,foo.bar.test2
     "drop-constant-columns": true,
     "obfuscate": ["test3"],
     "skip-scaling": ["test4"],
+    "sort-by": ["test4", "test3"],
     "rename": [
       { "test1": "test1_renamed" },
       { "test([3-4])": "test\\1_regex_renamed" },
@@ -130,34 +136,35 @@ test1,test2,test3,test4,test5,test6,test7,test8,test9,foo.bar.test,foo.bar.test2
 
 **Generated CSV file:**
 ```csv
-test1_renamed,test3_regex_renamed,test4_regex_renamed,test5,test6,test7,foo_1,foo_2
-0.0,0,2,0.1488888888888889,0.06,0.0,0.0,0.0
-0.5000000000000001,2,2,0.5055555555555556,0.08,0.2857142857142857,0.3333333333333333,0.3333333333333333
-1.0,1,4,0.0,1.0,0.5714285714285714,0.6666666666666666,0.6666666666666666
-0.5090909090909091,2,4,1.0,0.0,1.0,1.0,1.0
+test3_regex_renamed,test4_regex_renamed,test1_renamed,test5,test6,test7,foo_1,foo_2
+0,2,0.0,0.1488888888888889,0.06,0.0,0.0,0.0
+2,2,0.5000000000000001,0.5055555555555556,0.08,0.2857142857142857,0.3333333333333333,0.3333333333333333
+1,4,1.0,0.0,1.0,0.5714285714285714,0.6666666666666666,0.6666666666666666
+2,4,0.5090909090909091,1.0,0.0,1.0,1.0,1.0
 ```
 
 **Report:**
 ```csv
 ,action,column,details
 0,recipe_version,,1.0
-1,drpt_version,,0.2.8
+1,drpt_version,,0.6.3
 2,DROP,test2,
 3,DROP,test8,
 4,DROP,test9,
 5,DROP_CONSTANT,const,
-6,OBFUSCATE,test3,
+6,OBFUSCATE,test3,"{""one"": 0, ""three"": 1, ""two"": 2}"
 7,SCALE_DEFAULT,test1,"[1.1,3.3]"
 8,SCALE_DEFAULT,test5,"[0.1,1.0]"
 9,SCALE_DEFAULT,test6,"[0.0,5.0]"
 10,SCALE_DEFAULT,test7,"[-1.0,2.5]"
 11,SCALE_DEFAULT,foo.bar.test,"[1,4]"
 12,SCALE_DEFAULT,foo.bar.test2,"[1,4]"
-13,RENAME,test1,test1_renamed
-14,RENAME,test3,test3_regex_renamed
-15,RENAME,test4,test4_regex_renamed
-16,RENAME,foo.bar.test,foo_1
-17,RENAME,foo.bar.test2,foo_2
+13,SORT,"['test4', 'test3']",
+14,RENAME,test1,test1_renamed
+15,RENAME,test3,test3_regex_renamed
+16,RENAME,test4,test4_regex_renamed
+17,RENAME,foo.bar.test,foo_1
+18,RENAME,foo.bar.test2,foo_2
 ```
 
 ## Thanks

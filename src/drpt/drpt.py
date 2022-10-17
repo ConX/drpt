@@ -30,6 +30,10 @@ RECIPE_SCHEMA = {
                     "type": "array",
                     "items": {"type": "string"},
                 },
+                "sort-by": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                },
                 "rename": {
                     "type": "array",
                     "items": {
@@ -360,6 +364,12 @@ class DataReleasePrep:
                             right_index=True,
                         )
 
+    def _sort_rows(self):
+        if "sort-by" in self.recipe["actions"]:
+            with ProgressMessage("Sorting rows..."):
+                self.data.sort_values(self.recipe["actions"]["sort-by"], inplace=True)
+                self._report_log("SORT", self.recipe["actions"]["sort-by"], "")
+
     def _rename_columns(self):
         if "rename" in self.recipe["actions"]:
             with ProgressMessage("Renaming columns..."):
@@ -400,6 +410,7 @@ class DataReleasePrep:
         self._obfuscate_columns()
         if not self.recipe["actions"].get("disable-scaling", False):
             self._scale_columns()
+        self._sort_rows()
         self._rename_columns()
         if not self.dry_run:
             if self.input_file_suffix == ".csv":
