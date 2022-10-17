@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "drpt"
-version = "0.6.3"
+version = "0.7.0"
 description = "Tool for preparing a dataset for publishing by dropping, renaming, scaling, and obfuscating columns defined in a recipe."
 readme = "README.md"
 authors = [{ name = "Constantinos Xanthopoulos", email = "conx@xanthopoulos.info" }]
@@ -36,7 +36,7 @@ Homepage = "https://github.com/ConX/drpt"
 drpt = "drpt.__main__:main"
 
 [tool.bumpver]
-current_version = "0.6.3"
+current_version = "0.7.0"
 version_pattern = "MAJOR.MINOR.PATCH[PYTAGNUM]"
 commit_message = "Bump version {old_version} -> {new_version}"
 commit = true
