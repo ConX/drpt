@@ -66,6 +66,22 @@ def min_max_scale_limits(s, min_limit, max_limit):
     return (s - min_limit) / (max_limit - min_limit)
 
 
+class NpEncoder(json.JSONEncoder):
+    """
+    JSON Encoder for numpy types
+    Source: https://stackoverflow.com/a/57915246
+    """
+
+    def default(self, obj):
+        if isinstance(obj, np.integer):
+            return int(obj)
+        if isinstance(obj, np.floating):
+            return float(obj)
+        if isinstance(obj, np.ndarray):
+            return obj.tolist()
+        return super(NpEncoder, self).default(obj)
+
+
 class ProgressMessage:
     def __init__(self, message, parent=None):
         self.message = message
@@ -245,9 +261,11 @@ class DataReleasePrep:
                             skip_scaling = True
                             break
 
+                    # Prepare compute processes for a non-skipped column
                     if not skip_scaling:
                         col_min = self.data[col].min()
                         col_max = self.data[col].max()
+                        # Custom limits scaling
                         if self.limits is not None and col in self.limits:
                             min, max = self.limits[col]["min"], self.limits[col]["max"]
                             if min == max or (pd.isna(min) and pd.isna(max)):
@@ -256,8 +274,19 @@ class DataReleasePrep:
                                     col,
                                     f"Custom limits are the same: {min}. Reverting to min/max",
                                 )
+                                target = compute(
+                                    min_max_scale_limits(min, col_min, col_max)
+                                )[0]
                                 min, max = col_min, col_max
-                                self._report_log("SCALE_DEFAULT", col, f"[{min},{max}]")
+                                scale_properties = {
+                                    "range": [min, max],
+                                    "target": target,
+                                }
+                                self._report_log(
+                                    "SCALE_DEFAULT_TARGET",
+                                    col,
+                                    json.dumps(scale_properties, cls=NpEncoder),
+                                )
                             else:
                                 if pd.isna(min):
                                     min = col_min
@@ -299,6 +328,7 @@ class DataReleasePrep:
                                             max,
                                         )
                                     )
+                        # Default Min/Max scaling
                         else:
                             self._report_log(
                                 "SCALE_DEFAULT",
@@ -322,6 +352,7 @@ class DataReleasePrep:
                                         )
                                     )
 
+            # Execute scaling processes using Dask
             if not self.dry_run:
                 if len(min_max_scale_limit_futures) > 0:
                     with ProgressMessage(
