@@ -1,14 +1,11 @@
-[build-system]
-requires = ["setuptools>=61.0.0", "wheel"]
-build-backend = "setuptools.build_meta"
-
-[project]
+[tool.poetry]
 name = "drpt"
 version = "0.8.0"
 description = "Tool for preparing a dataset for publishing by dropping, renaming, scaling, and obfuscating columns defined in a recipe."
+authors = ["Constantinos Xanthopoulos <conx@xanthopoulos.info>"]
+license = "BSD-3-Clause"
 readme = "README.md"
-authors = [{ name = "Constantinos Xanthopoulos", email = "conx@xanthopoulos.info" }]
-license = { file = "LICENSE" }
+repository = "https://github.com/ConX/drpt"
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Science/Research",
@@ -19,21 +16,29 @@ classifiers = [
 ]
 keywords = ["data", "data science", "preprocessing", "scaling", "obfuscation", "data release", "data publishing"]
 
-requires-python = ">=3.9"
+[tool.poetry.dependencies]
+python = "^3.9"
+click = "^8.1.3"
+jsonschema = "^4.17.3"
+pandas = "^1.5.2"
+pyarrow = "^10.0.1"
+dask = "^2023.1.0"
 
-dependencies = [
-    "click >= 8.1.3",
-    "jsonschema >=4.16.0",
-    "pandas >=1.5.0",
-    "pyarrow >=9.0.0",
-    "dask >= 2022.9.2"
-]
+[tool.poetry.group.dev.dependencies]
+black = "^22.12.0"
+isort = "^5.11.4"
+ipykernel = "^6.20.1"
+flake8 = "^6.0.0"
+mypy = "^0.991"
+bumpver = "^2022.1120"
 
-[project.urls]
-Homepage = "https://github.com/ConX/drpt"
 
-[project.scripts]
+[tool.poetry.scripts]
 drpt = "drpt.__main__:main"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
 
 [tool.bumpver]
 current_version = "0.8.0"
@@ -46,7 +51,4 @@ push = true
 [tool.bumpver.file_patterns]
 "pyproject.toml" = [
     'version = "{version}"',
-]
-"src/drpt/__init__.py" = [
-    '__version__ = "{version}"',
 ]
