@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "drpt"
-version = "0.8.0"
+version = "0.8.1"
 description = "Tool for preparing a dataset for publishing by dropping, renaming, scaling, and obfuscating columns defined in a recipe."
 authors = ["Constantinos Xanthopoulos <conx@xanthopoulos.info>"]
 license = "BSD-3-Clause"
@@ -41,7 +41,7 @@ requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
 
 [tool.bumpver]
-current_version = "0.8.0"
+current_version = "0.8.1"
 version_pattern = "MAJOR.MINOR.PATCH[PYTAGNUM]"
 commit_message = "Bump version {old_version} -> {new_version}"
 commit = true
